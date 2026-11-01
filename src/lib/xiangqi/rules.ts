@@ -196,11 +196,91 @@ export function isAttacked(board: Board, square: number, by: Side): boolean {
   return false;
 }
 
-export function inCheck(board: Board, side: Side): boolean {
+/**
+ * King safety without scanning every piece. Advisors and elephants can never
+ * reach the enemy palace, so only rook, cannon, horse, pawn and the flying
+ * general matter.
+ */
+export function fastInCheckAt(board: Board, side: Side, king: number): boolean {
+  const kf = fileOf(king);
+  const kr = rankOf(king);
+  const enemy = opponent(side);
+
+  for (const [df, dr] of ORTH) {
+    let file = kf + df;
+    let rank = kr + dr;
+    let seen = false;
+    while (onBoard(file, rank)) {
+      const piece = board[at(file, rank)];
+      if (piece) {
+        if (!seen) {
+          if (piece.side === enemy && piece.kind === "R") return true;
+          if (piece.side === enemy && piece.kind === "K" && df === 0) return true;
+          seen = true;
+        } else if (piece.side === enemy && piece.kind === "C") {
+          return true;
+        } else {
+          break;
+        }
+      }
+      file += df;
+      rank += dr;
+    }
+  }
+
+  for (const [df, dr, lf, lr] of HORSE) {
+    const hf = kf - df;
+    const hr = kr - dr;
+    if (!onBoard(hf, hr)) continue;
+    const piece = board[at(hf, hr)];
+    if (!piece || piece.side !== enemy || piece.kind !== "H") continue;
+    const legF = hf + lf;
+    const legR = hr + lr;
+    if (onBoard(legF, legR) && !board[at(legF, legR)]) return true;
+  }
+
+  if (enemy === "b") {
+    if (kr > 0) {
+      const pawn = board[at(kf, kr - 1)];
+      if (pawn && pawn.side === "b" && pawn.kind === "P") return true;
+    }
+    if (kr >= 5) {
+      if (kf > 0) {
+        const pawn = board[at(kf - 1, kr)];
+        if (pawn && pawn.side === "b" && pawn.kind === "P") return true;
+      }
+      if (kf < 8) {
+        const pawn = board[at(kf + 1, kr)];
+        if (pawn && pawn.side === "b" && pawn.kind === "P") return true;
+      }
+    }
+  } else {
+    if (kr < 9) {
+      const pawn = board[at(kf, kr + 1)];
+      if (pawn && pawn.side === "r" && pawn.kind === "P") return true;
+    }
+    if (kr <= 4) {
+      if (kf > 0) {
+        const pawn = board[at(kf - 1, kr)];
+        if (pawn && pawn.side === "r" && pawn.kind === "P") return true;
+      }
+      if (kf < 8) {
+        const pawn = board[at(kf + 1, kr)];
+        if (pawn && pawn.side === "r" && pawn.kind === "P") return true;
+      }
+    }
+  }
+  return false;
+}
+
+export function fastInCheck(board: Board, side: Side): boolean {
   const king = findKing(board, side);
   if (king < 0) return true;
-  if (kingsFace(board)) return true;
-  return isAttacked(board, king, opponent(side));
+  return fastInCheckAt(board, side, king);
+}
+
+export function inCheck(board: Board, side: Side): boolean {
+  return fastInCheck(board, side);
 }
 
 function pushMove(board: Board, side: Side, from: number, file: number, rank: number, out: Move[]) {
@@ -305,13 +385,14 @@ export function undoMutable(board: Board, move: Move, captured: Piece | null) {
 }
 
 export function legalMoves(board: Board, side: Side): Move[] {
-  if (findKing(board, side) < 0) return [];
+  const king = findKing(board, side);
+  if (king < 0) return [];
   const pseudo = pseudoMoves(board, side);
   const out: Move[] = [];
   for (const move of pseudo) {
     const captured = playMutable(board, move);
-    const king = findKing(board, side);
-    const ok = king >= 0 && !isAttacked(board, king, opponent(side)) && !kingsFace(board);
+    const kingNow = move.from === king ? move.to : king;
+    const ok = !fastInCheckAt(board, side, kingNow);
     undoMutable(board, move, captured);
     if (ok) out.push(move);
   }
