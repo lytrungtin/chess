@@ -36,7 +36,7 @@ Tỷ số thắng / thua / hòa với bot giữ trong `localStorage`, khóa `car
 
 - Không xếp hạng máy chủ.
 - Không luật cấm nước, không renju.
-- Bot thấy đòn đôi ngay, và đọc trước ba nước đáp trên các nước ép.
+- Ba mức: Dễ, Vừa, Khó. Khó đọc trước bốn nước đáp trên các nước ép.
 
 ## Tiêu chí nhận
 
