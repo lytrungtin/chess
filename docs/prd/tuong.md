@@ -51,7 +51,7 @@ Tỷ số giữ trong `localStorage`, khóa `xiangqi-ap-luc-v1`.
 
 - Không sách khai cuộc, không tàn cuộc bảng.
 - Không UCI, không máy chủ.
-- Không đọc hết bàn sâu hơn hai nước — chỉ sâu thêm ở nước chính, trong 420 ms.
+- Không đọc hết bàn sâu hơn hai nước — chỉ sâu thêm ở nước chính, trong 5 giây.
 
 ## Tiêu chí nhận
 
@@ -65,7 +65,7 @@ Tỷ số giữ trong `localStorage`, khóa `xiangqi-ap-luc-v1`.
 | 6 | Chiếu hết một nước | Bot đánh, nhãn chiếu hết |
 | 7 | Quân treo | Xe đen ở (0,7) bị ăn |
 | 8 | Không all-in | Pháo không ăn mã đầu nếu xe ăn lại |
-| 9 | Tốc độ | Khai cuộc < 650 ms |
+| 9 | Tốc độ | Khai cuộc trong 5 giây |
 | 10 | Di động | 390 px không tràn, quân biên bấm được |
 
 ## Ngoài phạm vi

@@ -68,9 +68,9 @@ Khai cuộc tướng khoảng 44 nước, hệ số nhánh $b \approx 40$.
 |---|---|---|
 | Hết 2 nước đáp (sâu 3) | $\sim 40^{3} = 6{,}4\cdot 10^{4}$ lá, cộng sinh nước | khoảng 180–300 ms |
 | Sâu 5 toàn bàn | $\sim 40^{5} \approx 10^{8}$ | không kịp |
-| Sâu 5, 6 nước gốc, chùm 10 | cắt bởi alpha-beta và trần thời gian | trong 420 ms |
+| Sâu 5, 6 nước gốc, chùm 10 | cắt bởi alpha-beta và trần thời gian | trong 5 giây |
 
-Trần 420 ms là ràng buộc giao diện: tìm kiếm chạy đồng bộ trên luồng vẽ. Quá một giây thì bàn khựng.
+Trần 5 giây mỗi nước. Tìm kiếm chạy đồng bộ trên luồng vẽ, nên bàn dừng trong lúc bot nghĩ.
 
 ## 2. Ánh xạ công thức kéo co
 
@@ -209,7 +209,7 @@ Luật và bot tách nhau để test luật không cần bot, và để đổi t
 |---|---|---|
 | Caro heuristic, không minimax | Một nước tức thì, thấy đòn đôi | Không thấy bẫy ba nước |
 | Tướng sâu 3 toàn bàn + sâu 5 có chọn | Thấy ăn lại và một số hết quân dài | Nước đầu trông yếu nhưng về sau hay thì bị loại trước khi đọc sâu |
-| Null-move | Sâu hơn trong 420 ms | Có thể cắt nhầm thế zugzwang |
+| Null-move | Sâu hơn trong 5 giây | Có thể cắt nhầm thế zugzwang |
 | Khóa Zobrist 32 bit | XOR nhanh | Đụng khóa hiếm |
 | Lặp ba lần = hòa | Dễ cắt ván vô hạn | Không đúng luật chiếu vĩnh viễn |
 | Không sách khai cuộc | Mọi thế đều một cách nghĩ | Khai cuộc không giống sách |

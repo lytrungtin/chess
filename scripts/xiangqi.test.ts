@@ -83,7 +83,7 @@ const opening = decide(startBoard(), "r");
 const openMs = Date.now() - openT;
 console.log("opening decision", opening.title, opening.note, `${openMs}ms`);
 assert(opening.from >= 0, "opening move exists");
-assert(openMs < 650, `opening think too slow: ${openMs}ms`);
+assert(openMs < 6_500, `opening think too slow: ${openMs}ms`);
 assert(/[234] nước/.test(opening.note), `should say how far it read, got ${opening.note}`);
 const opener = startBoard()[opening.from];
 assert(opener && (opener.kind === "C" || opener.kind === "H"), "opening develops cannon or horse");

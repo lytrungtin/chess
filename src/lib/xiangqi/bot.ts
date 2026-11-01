@@ -42,7 +42,7 @@ const VALUE: Record<Kind, number> = {
 
 const MATE = 100_000;
 const MATE_BOUND = 90_000;
-const BUDGET_MS = 420;
+const BUDGET_MS = 5_000;
 const MAX_DEPTH = 3;
 const SELECT_DEPTH = 5;
 const SELECT_ROOT = 6;

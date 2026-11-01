@@ -46,7 +46,7 @@ Caro làm thắng, chặn và đòn đôi bằng khớp hình, rồi đọc ba n
 | 3 | Đòn đôi | Caro: hai ô thắng hoặc hai ba hở thì lấy. Tướng: điểm > nửa mức chiếu hết thì nhãn ép chiếu |
 | 4 | Không all-in | Caro không đuổi hàng yếu khi có đe dọa gần. Tướng không ăn mã bằng pháo nếu xe ăn lại |
 | 5 | Giải thích | Thẻ có nhãn và một câu tiếng Việt đúng nhãn |
-| 6 | Tốc độ | Khai cuộc tướng < 650 ms trên máy thử |
+| 6 | Tốc độ | Mỗi nước tối đa 5 giây |
 
 ## Đo
 
