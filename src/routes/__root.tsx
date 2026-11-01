@@ -32,6 +32,11 @@ export const Route = createRootRoute({
     <html lang="vi" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var k="chunk-reload";function go(){try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}location.reload()}window.addEventListener("vite:preloadError",function(e){e.preventDefault();go()});window.addEventListener("unhandledrejection",function(e){var m=String((e.reason&&e.reason.message)||e.reason||"");if(m.indexOf("Failed to fetch dynamically imported module")!==-1||m.indexOf("Importing a module script failed")!==-1){e.preventDefault();go()}});setTimeout(function(){try{sessionStorage.removeItem(k)}catch(e){}},8000)})();`,
+          }}
+        />
       </head>
       <body>
         <PreviewHostBridge />

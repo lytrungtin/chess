@@ -24,6 +24,13 @@ export function AppErrorComponent({ error }: ErrorComponentProps) {
       <p className="max-w-md text-sm break-words text-zinc-500 dark:text-zinc-400">
         {errorMessage(error)}
       </p>
+      <button
+        type="button"
+        onClick={() => window.location.reload()}
+        className="mt-2 h-10 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white dark:bg-zinc-100 dark:text-zinc-900"
+      >
+        Tải lại
+      </button>
     </main>
   );
 }
