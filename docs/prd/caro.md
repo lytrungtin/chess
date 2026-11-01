@@ -6,7 +6,7 @@ Cần một bàn caro chơi được ngay, đấu bot hoặc hai người, bot g
 
 ## Luật
 
-- Bàn 50×50, giao điểm không dùng — mỗi ô một quân.
+- Bàn 32×32, giao điểm không dùng — mỗi ô một quân.
 - X đi trước. Năm quân liền theo hàng, cột hoặc chéo là thắng.
 - Ô trống nằm giữa một dãy được tính khi quân lấp vào. `X . X X X` thành năm nếu đánh vào lỗ.
 - Hết ô trống mà chưa ai thắng thì hòa.
@@ -47,7 +47,7 @@ Tỷ số thắng / thua / hòa với bot giữ trong `localStorage`, khóa `car
 | 3 | Bot khai cuộc | Ô giữa nếu bàn trống |
 | 4 | Bot không bỏ thắng | Tự đấu: hễ có năm quân thì đánh |
 | 5 | Hai người | Không sinh nước bot |
-| 6 | Di động | 390 px không tràn trang; bàn 50×50 cuộn trong khung, ô 30 px |
+| 6 | Di động | 390 px không tràn trang; bàn 32×32 cuộn trong khung, ô 30 px |
 
 ## Ngoài phạm vi phiên này
 

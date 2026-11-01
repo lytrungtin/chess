@@ -12,7 +12,7 @@ Mọi trò như vậy đều **xác định**: một trong hai bên có chiến 
 
 Hệ quả thiết kế: nước dẫn tới thế kết tốt hơn mọi nước chỉ cải thiện hình. Thứ tự Áp Lực đặt thắng ngay và chặn thắng ngay lên trên áp lực.
 
-Caro 50×50 tự do và cờ tướng đủ quân **chưa được giải**. Bot xấp xỉ giá trị của định lý, không tính ra chiến lược Zermelo.
+Caro 32×32 tự do và cờ tướng đủ quân **chưa được giải**. Bot xấp xỉ giá trị của định lý, không tính ra chiến lược Zermelo.
 
 ### Định lý minimax của von Neumann
 

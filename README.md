@@ -4,7 +4,7 @@ Hai bàn cờ trên một trang. Cùng một cách nghĩ: **thắng ngay thì đ
 
 | Tab | Luật | Bot |
 |---|---|---|
-| Caro | 50×50, năm quân liền thắng | Heuristic đe dọa: thắng, chặn, song ba, áp lực |
+| Caro | 32×32, năm quân liền thắng | Heuristic đe dọa: thắng, chặn, song ba, áp lực |
 | Tướng | Cờ tướng đủ luật | Negamax + alpha-beta, đọc sâu ở nước chính |
 
 ## Chơi
@@ -28,7 +28,7 @@ Hai bàn cờ trên một trang. Cùng một cách nghĩ: **thắng ngay thì đ
 ## Cấu trúc mã
 
 ```text
-src/lib/caro/rules.ts      luật 50×50, năm quân
+src/lib/caro/rules.ts      luật 32×32, năm quân
 src/lib/caro/bot.ts        thứ tự Áp Lực trên hình cờ
 src/lib/xiangqi/rules.ts   luật tướng, xét chiếu theo tia
 src/lib/xiangqi/bot.ts     negamax, quiesce, đọc sâu có chọn
