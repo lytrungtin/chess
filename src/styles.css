@@ -134,6 +134,102 @@
     background: var(--color-mark-x);
     animation: think 900ms ease-in-out infinite;
   }
+
+  .xq-frame {
+    padding: 6%;
+  }
+
+  .xq-board {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 8 / 9;
+    touch-action: manipulation;
+    border-radius: var(--radius-board);
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--color-paper) 30%, transparent),
+      0 18px 40px color-mix(in srgb, black 35%, transparent);
+  }
+
+  .xq-point {
+    position: absolute;
+    z-index: 1;
+    display: grid;
+    width: 12%;
+    aspect-ratio: 1;
+    place-items: center;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    transform: translate(-50%, -50%);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .xq-point:focus-visible {
+    outline: 2px solid var(--color-mark-x);
+    outline-offset: 1px;
+    border-radius: 999px;
+  }
+
+  .xq-point:disabled {
+    cursor: default;
+  }
+
+  .xq-disc {
+    display: grid;
+    width: 88%;
+    height: 88%;
+    place-items: center;
+    border-radius: 999px;
+    font-family: "Noto Serif SC", "Songti SC", serif;
+    font-size: clamp(0.85rem, 2.5vw, 1.45rem);
+    font-weight: 700;
+    line-height: 1;
+    animation: stone-in 160ms ease-out;
+  }
+
+  .xq-disc.is-red {
+    background: var(--color-mark-x);
+    color: var(--color-paper);
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, var(--color-paper) 70%, var(--color-mark-x)),
+      0 1px 0 color-mix(in srgb, var(--color-ink) 40%, transparent);
+  }
+
+  .xq-disc.is-black {
+    background: var(--color-ink);
+    color: var(--color-paper);
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, var(--color-paper) 40%, var(--color-ink)),
+      0 1px 0 color-mix(in srgb, black 45%, transparent);
+  }
+
+  .xq-point.is-selected .xq-disc,
+  .xq-point.is-last .xq-disc {
+    box-shadow:
+      inset 0 0 0 2px var(--color-paper),
+      0 0 0 2px var(--color-mark-x);
+  }
+
+  .xq-point.is-check .xq-disc {
+    box-shadow:
+      inset 0 0 0 2px var(--color-paper),
+      0 0 0 3px var(--color-mark-x);
+  }
+
+  .xq-dot {
+    width: 26%;
+    height: 26%;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-ink) 55%, transparent);
+  }
+
+  .xq-ring {
+    position: absolute;
+    inset: 6%;
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 3px var(--color-mark-x);
+  }
 }
 
 @keyframes stone-in {

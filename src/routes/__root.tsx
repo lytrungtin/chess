@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Cờ Caro";
+const APP_NAME = "Cờ";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,7 +13,7 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Cờ caro 15×15 với bot Áp Lực: thắng ngay, chặn ngay, và đánh theo độ gần năm quân.",
+        content: "Cờ caro và cờ tướng. Bot Áp Lực: thắng ngay, chặn ngay, rồi mới ép quân.",
       },
       { name: "theme-color", content: "#241e18" },
     ],
@@ -21,7 +21,7 @@ export const Route = createRootRoute({
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
       {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Noto+Serif+SC:wght@700&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap",
       },
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/__grok/manifest.webmanifest" },
