@@ -34,7 +34,7 @@ export const Route = createRootRoute({
         <HeadContent />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var k="chunk-reload";function go(){try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}location.reload()}window.addEventListener("vite:preloadError",function(e){e.preventDefault();go()});window.addEventListener("unhandledrejection",function(e){var m=String((e.reason&&e.reason.message)||e.reason||"");if(m.indexOf("Failed to fetch dynamically imported module")!==-1||m.indexOf("Importing a module script failed")!==-1){e.preventDefault();go()}});setTimeout(function(){try{sessionStorage.removeItem(k)}catch(e){}},8000)})();`,
+            __html: `(function(){var k="chunk-reload";function go(){try{if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,"1")}catch(e){}location.reload()}window.addEventListener("vite:preloadError",function(e){e.preventDefault();go()});window.addEventListener("unhandledrejection",function(e){var m=String((e.reason&&e.reason.message)||e.reason||"");if(m.indexOf("Failed to fetch dynamically imported module")!==-1||m.indexOf("Importing a module script failed")!==-1){e.preventDefault();go()}});window.addEventListener("error",function(e){var t=e.target;if(!t||!t.tagName)return;var src=t.src||t.href||"";if(src.indexOf("/assets/")===-1)return;if(t.tagName==="SCRIPT"||t.tagName==="LINK")go()},true);setTimeout(function(){try{sessionStorage.removeItem(k)}catch(e){}},8000)})();`,
           }}
         />
       </head>
