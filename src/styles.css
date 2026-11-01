@@ -69,19 +69,19 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  .caro-cell:first-child {
+  .caro-cell.is-tl {
     border-top-left-radius: calc(var(--radius-board) - 1px);
   }
 
-  .caro-cell:nth-child(15) {
+  .caro-cell.is-tr {
     border-top-right-radius: calc(var(--radius-board) - 1px);
   }
 
-  .caro-cell:nth-child(211) {
+  .caro-cell.is-bl {
     border-bottom-left-radius: calc(var(--radius-board) - 1px);
   }
 
-  .caro-cell:last-child {
+  .caro-cell.is-br {
     border-bottom-right-radius: calc(var(--radius-board) - 1px);
   }
 

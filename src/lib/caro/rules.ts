@@ -1,6 +1,6 @@
 export type Side = 1 | 2;
 
-export const SIZE = 15;
+export const SIZE = 19;
 export const WIN = 5;
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [

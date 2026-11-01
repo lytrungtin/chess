@@ -15,7 +15,8 @@ function place(rows: Array<[number, number, Side]>) {
   return board;
 }
 
-const center = cell(7, 7);
+const mid = Math.floor(SIZE / 2);
+const center = cell(mid, mid);
 const opening = decide(new Uint8Array(SIZE * SIZE), 1);
 assert(opening.index === center, `opening should be center, got ${opening.index}`);
 assert(opening.kind === "pressure", "opening is pressure");

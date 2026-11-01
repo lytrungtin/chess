@@ -217,12 +217,13 @@ export function CaroGame() {
   const activeKind = decision?.kind;
 
   return (
-    <main className="mx-auto grid w-full max-w-6xl gap-5 px-3 py-4 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
+    <main className="mx-auto grid w-full max-w-7xl gap-5 px-2 py-4 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,1.2fr)_20rem] lg:items-start lg:gap-8">
       <section className="min-w-0">
         <header className="mb-3 flex items-end justify-between gap-3">
           <div>
             <p className="text-xs font-medium tracking-[0.16em] text-paper/60 uppercase">Bot Áp Lực</p>
             <h1 className="font-display text-4xl leading-none text-paper sm:text-5xl">Cờ Caro</h1>
+              <p className="mt-1 text-sm text-paper/60">{SIZE}×{SIZE}</p>
           </div>
           <p className="pb-1 text-sm text-paper/70">Nước {game.moves.length}</p>
         </header>
@@ -235,8 +236,8 @@ export function CaroGame() {
         <div
           className="caro-board"
           role="group"
-          aria-label="Bàn cờ caro 15 nhân 15"
-          style={{ gridTemplateColumns: "repeat(15, minmax(0, 1fr))" }}
+          aria-label={`Bàn cờ caro ${SIZE} nhân ${SIZE}`}
+          style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))` }}
         >
           {Array.from({ length: SIZE * SIZE }, (_, index) => {
             const value = game.board[index] as 0 | Side;
@@ -247,7 +248,14 @@ export function CaroGame() {
               <button
                 key={index}
                 type="button"
-                className={clsx("caro-cell", win.has(index) && "is-win")}
+                className={clsx(
+                  "caro-cell",
+                  win.has(index) && "is-win",
+                  index === 0 && "is-tl",
+                  index === SIZE - 1 && "is-tr",
+                  index === (SIZE - 1) * SIZE && "is-bl",
+                  index === SIZE * SIZE - 1 && "is-br",
+                )}
                 disabled={locked || value !== 0}
                 onClick={() => onCell(index)}
                 aria-label={
