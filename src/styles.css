@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+@theme {
+  --color-felt: #241e18;
+  --color-paper: #f3eadc;
+  --color-ink: #1c1712;
+  --color-mark-x: #a33b2b;
+  --color-mark-o: #1d3e66;
+  --color-muted: #6f675c;
+  --font-sans: "Be Vietnam Pro", "Segoe UI", sans-serif;
+  --font-display: "Source Serif 4", "Iowan Old Style", Palatino, serif;
+  --radius-board: 1.25rem;
+}
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    background: var(--color-felt);
+  }
+
+  body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-felt);
+    color: var(--color-paper);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

@@ -1,0 +1,12 @@
+node_modules/
+.project_id
+.github_repo
+.env
+.env.*
+
+# build output and local QA — not source
+.vercel/
+screenshots/
+artifacts/
+.grok/status
+.grok/preview.log
