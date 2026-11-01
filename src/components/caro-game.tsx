@@ -31,7 +31,7 @@ const PRINCIPLES: { kinds: Kind[]; title: string; body: string }[] = [
   {
     kinds: ["pressure"],
     title: "Áp lực tỷ lệ",
-    body: "Đọc trước mười nước đáp, trong mười giây. Ô nào gần năm hơn thì đáng đi hơn.",
+    body: "Cắt nước yếu. Đọc trước mười nước đáp, trong mười giây.",
   },
   {
     kinds: ["pressure"],

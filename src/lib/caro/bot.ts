@@ -217,25 +217,78 @@ function threeExtensions(board: Uint8Array, index: number, side: Side): number[]
   return out;
 }
 
-type SearchBudget = { nodes: number; start: number };
+type SearchBudget = { nodes: number; start: number; cut: boolean };
+
+const Z = new Uint32Array(SIZE * SIZE * 2);
+{
+  let seed = 0x9e3779b9;
+  for (let i = 0; i < Z.length; i += 1) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    Z[i] = seed;
+  }
+}
+const TT_SIZE = 1 << 18;
+const ttMove = new Int32Array(TT_SIZE);
+const ttHash = new Uint32Array(TT_SIZE);
+const ttLeft = new Uint8Array(TT_SIZE);
+
+function hashBoard(board: Uint8Array): number {
+  let h = 0;
+  for (let i = 0; i < board.length; i += 1) {
+    const side = board[i];
+    if (side) h ^= Z[(i << 1) + side - 1];
+  }
+  return h >>> 0;
+}
+
+function remember(slot: number, key: number, movesLeft: number, move: number, budget: SearchBudget) {
+  if (budget.cut) return;
+  ttHash[slot] = key;
+  ttLeft[slot] = movesLeft;
+  ttMove[slot] = move;
+}
 
 /**
  * Forcing win over `movesLeft` of our moves.
  * A four leaves one block. An open three leaves two extensions.
  * Every forced reply must still lose, or it is not a force.
  */
-function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: SearchBudget, profile: Profile): number {
-  if (budget.nodes > profile.nodes || Date.now() - budget.start > profile.ms) return -1;
+function findForce(
+  board: Uint8Array,
+  side: Side,
+  movesLeft: number,
+  budget: SearchBudget,
+  profile: Profile,
+  hash: number,
+): number {
+  if (budget.nodes > profile.nodes || Date.now() - budget.start > profile.ms) {
+    budget.cut = true;
+    return -1;
+  }
+  const key = (hash ^ (side * 0x85ebca6b) ^ (movesLeft * 0xc2b2ae35)) >>> 0;
+  const slot = key & (TT_SIZE - 1);
+  if (ttHash[slot] === key && ttLeft[slot] >= movesLeft) return ttMove[slot];
+  const killer = ttHash[slot] === key ? ttMove[slot] : -1;
+
   const opp = opponent(side);
-  const ordered = candidates(board)
+  let ordered = candidates(board)
     .map((index) => ({ index, score: shapeScore(board, index, side) }))
     .sort((a, b) => b.score - a.score)
     .slice(0, profile.forceBeam);
+  if (killer >= 0) {
+    ordered = [{ index: killer, score: shapeScore(board, killer, side) }, ...ordered.filter((item) => item.index !== killer)];
+  }
+  const top = ordered[0]?.score ?? 0;
 
   for (const { index, score } of ordered) {
     if (score < 8_000) break;
+    if (top >= 800_000 && score < 40_000) break;
     budget.nodes += 1;
-    if (createsWinAt(board, index, side)) return index;
+    if (createsWinAt(board, index, side)) {
+      remember(slot, key, movesLeft, index, budget);
+      return index;
+    }
+    const placed = hash ^ Z[(index << 1) + side - 1];
     board[index] = side;
     let wins = 0;
     let only = -1;
@@ -248,7 +301,7 @@ function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: Sea
     let forced = wins >= 2;
     if (!forced && movesLeft > 1 && wins === 1) {
       board[only] = opp;
-      forced = findForce(board, side, movesLeft - 1, budget, profile) >= 0;
+      forced = findForce(board, side, movesLeft - 1, budget, profile, placed ^ Z[(only << 1) + opp - 1]) >= 0;
       board[only] = 0;
     } else if (!forced && movesLeft > 1 && wins === 0) {
       const exts = [...new Set(threeExtensions(board, index, side))];
@@ -256,7 +309,7 @@ function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: Sea
         forced = true;
         for (const ext of exts) {
           board[ext] = opp;
-          const lost = findForce(board, side, movesLeft - 1, budget, profile) >= 0;
+          const lost = findForce(board, side, movesLeft - 1, budget, profile, placed ^ Z[(ext << 1) + opp - 1]) >= 0;
           board[ext] = 0;
           if (!lost) {
             forced = false;
@@ -266,13 +319,17 @@ function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: Sea
       }
     }
     board[index] = 0;
-    if (forced) return index;
+    if (forced) {
+      remember(slot, key, movesLeft, index, budget);
+      return index;
+    }
   }
+  remember(slot, key, movesLeft, -1, budget);
   return -1;
 }
 
 /** Two replies on one candidate: my move, their best tries, my follow-up. */
-function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudget, profile: Profile): number {
+function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudget, profile: Profile, alpha: number, replyCap: number): number {
   const opp = opponent(me);
   board[index] = me;
   if (winSquares(board, opp).length > 0) {
@@ -282,7 +339,7 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
   const replies = candidates(board)
     .map((cell) => ({ cell, score: shapeScore(board, cell, opp) }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, profile.replies);
+    .slice(0, replyCap);
   let worst = Infinity;
   for (const reply of replies) {
     if (budget.nodes > profile.nodes || Date.now() - budget.start > profile.ms) break;
@@ -313,6 +370,7 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
     }
     board[reply.cell] = 0;
     if (bestFollow < worst) worst = bestFollow;
+    if (worst <= alpha) break;
   }
   board[index] = 0;
   return worst === Infinity ? -1_000_000_000 : worst;
@@ -439,13 +497,14 @@ export function decide(source: Uint8Array, me: Side): Decision {
   }
   if (blocks.length > 0) return pack("block-fork", rank(board, blocks, me));
 
-  const budget: SearchBudget = { nodes: 0, start: Date.now() };
-  const force = findForce(board, me, profile.forceMoves, budget, profile);
+  const budget: SearchBudget = { nodes: 0, start: Date.now(), cut: false };
+  const hash = hashBoard(board);
+  const force = findForce(board, me, profile.forceMoves, budget, profile, hash);
   if (force >= 0) {
-    return pack("fork", rank(board, [force], me), null, `Đọc trước ${profile.read} trên nước ép. Họ chặn một chỗ, nước sau vẫn thành năm hoặc đòn đôi.`);
+    return pack("fork", rank(board, [force], me), null, `Cắt nước yếu. Đọc trước ${profile.read} trên nước ép. Họ chặn một chỗ, nước sau vẫn thành năm hoặc đòn đôi.`);
   }
 
-  const oppForce = findForce(board, opp, profile.forceMoves, budget, profile);
+  const oppForce = findForce(board, opp, profile.forceMoves, budget, profile, hash);
   if (oppForce >= 0) {
     return pack("block-fork", rank(board, [oppForce], me), null, `Đối thủ có nước ép trong ${profile.read}. Giữ ô đó trước khi họ đánh.`);
   }
@@ -453,22 +512,24 @@ export function decide(source: Uint8Array, me: Side): Decision {
   const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, profile.pressure);
   let best: Ranked | null = null;
   let bestBias = -Infinity;
+  let alpha = -Infinity;
   const mid = (SIZE - 1) / 2;
-  for (const index of seeded) {
+  seeded.forEach((index, nth) => {
     const mine = shapeScore(board, index, me);
-    const score = twoReply(board, index, me, budget, profile);
+    const score = twoReply(board, index, me, budget, profile, alpha, nth >= 6 ? 2 : profile.replies);
     const bias = -((rowOf(index) - mid) ** 2 + (colOf(index) - mid) ** 2);
     if (!best || score > best.score || (score === best.score && bias > bestBias)) {
       best = { index, score, mine, theirs: Math.max(0, -score) };
       bestBias = bias;
+      alpha = score;
     }
-  }
+  });
   const ranked = best ?? rank(board, cells, me);
   return pack(
     "pressure",
     ranked,
     null,
-    `Đọc trước ${profile.read}. Đòn ta: ${band(ranked.mine)}.`,
+    `Cắt nước yếu. Đọc trước ${profile.read}. Đòn ta: ${band(ranked.mine)}.`,
   );
 }
 
