@@ -37,7 +37,7 @@ const PRINCIPLES: { kinds: BotKind[]; title: string; body: string }[] = [
   {
     kinds: ["pressure", "capture"],
     title: "Áp lực",
-    body: "Đọc trước hai nước. Xe, pháo, mã tiến về phía tướng.",
+    body: "Đọc sâu ở nước chính. Xe, pháo, mã tiến về phía tướng.",
   },
   {
     kinds: ["pressure", "capture"],
@@ -334,7 +334,7 @@ export function XiangqiGame() {
           <p className="text-sm leading-relaxed text-ink/80">
             {decision
               ? decision.note
-              : "Đỏ đi trước. Bot đọc trước hai nước đáp: chiếu hết thì đánh, bị chiếu thì thoát, rồi mới ép về cung."}
+              : "Đỏ đi trước. Bot đọc hết hai nước, rồi đọc sâu thêm ở các nước chính."}
           </p>
         </section>
 

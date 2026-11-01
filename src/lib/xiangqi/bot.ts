@@ -44,6 +44,9 @@ const MATE = 100_000;
 const MATE_BOUND = 90_000;
 const BUDGET_MS = 420;
 const MAX_DEPTH = 3;
+const SELECT_DEPTH = 5;
+const SELECT_ROOT = 6;
+const BEAM = 10;
 const TT_BITS = 16;
 const TT_SIZE = 1 << TT_BITS;
 const TT_MASK = TT_SIZE - 1;
@@ -244,13 +247,27 @@ function lookup(hash: number, depth: number, alpha: number, beta: number, ply: n
   return null;
 }
 
-function search(board: Board, side: Side, hash: number, depth: number, alpha: number, beta: number, ply: number): number {
+function search(
+  board: Board,
+  side: Side,
+  hash: number,
+  depth: number,
+  alpha: number,
+  beta: number,
+  ply: number,
+  beam = 99,
+  allowNull = true,
+): number {
   if (timedOut()) return 0;
   if (findKing(board, side) < 0) return -MATE + ply;
   const check = inCheck(board, side);
   if (depth <= 0 && !check) return quiesce(board, side, hash, alpha, beta, ply, 2, -1);
   const cached = lookup(hash, depth, alpha, beta, ply);
   if (cached != null) return cached;
+  if (allowNull && !check && depth >= 3 && ply > 0 && beta < MATE_BOUND) {
+    const nullScore = -search(board, opponent(side), hash ^ ZSIDE, depth - 3, -beta, -beta + 1, ply + 1, beam, false);
+    if (!aborted && nullScore >= beta) return nullScore;
+  }
   const moves = legalMoves(board, side);
   if (moves.length === 0) return -MATE + ply;
   const ordered = orderMoves(board, moves, side, hash, ply);
@@ -258,14 +275,16 @@ function search(board: Board, side: Side, hash: number, depth: number, alpha: nu
   let bestMove: Move | null = null;
   let flag = UPPER;
   const startAlpha = alpha;
+  const limit = Math.min(ordered.length, beam);
   for (let i = 0; i < ordered.length; i += 1) {
+    if (i >= limit && !board[ordered[i].to]) continue;
     const move = ordered[i];
     const captured = playMutable(board, move);
     const nextHash = hashAfter(hash, board, move, captured);
     let nextDepth = depth - 1;
     const quiet = !captured && !inCheck(board, opponent(side));
-    if (quiet && i >= 6 && depth >= 3) nextDepth -= 1;
-    const score = -search(board, opponent(side), nextHash, nextDepth, -beta, -alpha, ply + 1);
+    if (quiet && i >= 4 && depth >= 3) nextDepth -= 1;
+    const score = -search(board, opponent(side), nextHash, nextDepth, -beta, -alpha, ply + 1, beam, true);
     undoMutable(board, move, captured);
     if (aborted) return 0;
     if (score > best) {
@@ -359,10 +378,66 @@ function resetSearch(budget: number) {
   tt.fill(undefined);
 }
 
+
+function deepen(
+  board: Board,
+  side: Side,
+  rootHash: number,
+  ranked: { move: Move; score: number }[],
+  until: number,
+): { move: Move; score: number; depth: number } | null {
+  const pool = ranked.slice(0, SELECT_ROOT).map((item) => item.move);
+  if (pool.length === 0 || Date.now() > until) return null;
+  let best = pool[0];
+  let bestScore = -Infinity;
+  let depthReached = MAX_DEPTH;
+  for (let depth = MAX_DEPTH + 1; depth <= SELECT_DEPTH; depth += 1) {
+    if (Date.now() > until) break;
+    aborted = false;
+    let iterBest = best;
+    let iterScore = -Infinity;
+    let completed = true;
+    for (const move of pool) {
+      if (Date.now() > until) {
+        completed = false;
+        break;
+      }
+      const captured = playMutable(board, move);
+      const score = -search(
+        board,
+        opponent(side),
+        hashAfter(rootHash, board, move, captured),
+        depth - 1,
+        -Infinity,
+        Infinity,
+        1,
+        BEAM,
+      );
+      undoMutable(board, move, captured);
+      if (aborted) {
+        completed = false;
+        break;
+      }
+      if (score > iterScore) {
+        iterScore = score;
+        iterBest = move;
+      }
+    }
+    if (!completed) break;
+    best = iterBest;
+    bestScore = iterScore;
+    depthReached = depth;
+  }
+  if (depthReached === MAX_DEPTH) return null;
+  return { move: best, score: bestScore, depth: depthReached };
+}
+
 function label(board: Board, side: Side, move: Move, score: number, depth: number, checking: boolean): Decision {
   const captured = board[move.to];
   const replies = Math.max(1, depth - 1);
-  const depthNote = `Đọc trước ${replies} nước đáp. `;
+  const depthNote = depth >= 4
+    ? `Đọc trước ${replies} nước ở các nước chính. `
+    : `Đọc trước ${replies} nước đáp. `;
   if (checking) {
     return {
       from: move.from,
@@ -400,8 +475,8 @@ function label(board: Board, side: Side, move: Move, score: number, depth: numbe
 }
 
 /**
- * Same order as the caro bot, but it now reads two replies ahead:
- * mate now, escape mate, then pressure toward the enemy general.
+ * Mate now, escape mate, then pressure. Full search sees two replies;
+ * the best few moves are read two plies further.
  */
 export function decide(source: Board, side: Side): Decision {
   const board = source.slice();
@@ -445,6 +520,7 @@ export function decide(source: Board, side: Side): Decision {
     let iterBest = best;
     let iterScore = -Infinity;
     let completed = true;
+    const ranked: { move: Move; score: number }[] = [];
     for (const move of ordered) {
       if (depth > 1 && Date.now() > deadline) {
         completed = false;
@@ -457,6 +533,7 @@ export function decide(source: Board, side: Side): Decision {
         completed = false;
         break;
       }
+      ranked.push({ move, score });
       if (score > iterScore) {
         iterScore = score;
         iterBest = move;
@@ -466,7 +543,18 @@ export function decide(source: Board, side: Side): Decision {
       best = iterBest;
       bestScore = iterScore;
       finishedDepth = depth;
+      ranked.sort((a, b) => b.score - a.score);
       store(rootHash, depth, iterScore, EXACT, iterBest, 0);
+      if (depth === MAX_DEPTH) {
+        const extra = deepen(board, side, rootHash, ranked, deadline);
+        if (extra) {
+          best = extra.move;
+          bestScore = extra.score;
+          finishedDepth = extra.depth;
+        }
+      }
+    } else {
+      break;
     }
   }
 
