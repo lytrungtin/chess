@@ -31,7 +31,7 @@ const PRINCIPLES: { kinds: Kind[]; title: string; body: string }[] = [
   {
     kinds: ["pressure"],
     title: "Áp lực tỷ lệ",
-    body: "Ô nào gần năm hơn thì đáng đi hơn.",
+    body: "Đọc trước một nước đáp. Ô nào gần năm hơn thì đáng đi hơn.",
   },
   {
     kinds: ["pressure"],
@@ -318,7 +318,7 @@ export function CaroGame() {
           <p className="text-sm leading-relaxed text-ink/80">
             {decision
               ? decision.note
-              : "X đi trước. Bot đọc bàn như đọc ngân sách: ai gần năm quân hơn thì nước đó đáng hơn."}
+              : "X đi trước. Bot đọc trước một nước đáp: thắng thì đánh, bị thắng thì chặn, rồi mới ép."}
           </p>
         </section>
 

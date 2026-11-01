@@ -36,7 +36,7 @@ Tỷ số thắng / thua / hòa với bot giữ trong `localStorage`, khóa `car
 
 - Không xếp hạng máy chủ.
 - Không luật cấm nước, không renju.
-- Bot không đọc sâu nhiều nước — caro dùng heuristic một nước có thấy đòn đôi.
+- Bot thấy đòn đôi ngay, và đọc trước một nước đáp trên các nước ép.
 
 ## Tiêu chí nhận
 

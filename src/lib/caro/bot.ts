@@ -156,6 +156,59 @@ function forkAt(board: Uint8Array, index: number, side: Side): Fork | null {
 
 type Ranked = { index: number; score: number; mine: number; theirs: number };
 
+/** Empty cells where `side` would complete five. */
+function winSquares(board: Uint8Array, side: Side): number[] {
+  const out: number[] = [];
+  for (const cell of candidates(board)) {
+    if (createsWinAt(board, cell, side)) out.push(cell);
+  }
+  return out;
+}
+
+/**
+ * A forcing win: a move that leaves one block, and after that block
+ * we still have a five or a double threat. Quiet moves are ignored.
+ */
+function findForce(board: Uint8Array, side: Side, movesLeft: number): number {
+  const opp = opponent(side);
+  const cells = candidates(board);
+  const ordered = cells
+    .map((index) => ({ index, score: shapeScore(board, index, side) }))
+    .sort((a, b) => b.score - a.score);
+
+  for (const { index, score } of ordered) {
+    if (score < 40_000) break;
+    if (createsWinAt(board, index, side)) return index;
+    board[index] = side;
+    let wins = 0;
+    let only = -1;
+    for (const cell of candidates(board)) {
+      if (!createsWinAt(board, cell, side)) continue;
+      wins += 1;
+      only = cell;
+      if (wins >= 2) break;
+    }
+    let forced = wins >= 2;
+    if (!forced && wins === 1 && movesLeft > 1) {
+      board[only] = opp;
+      forced = findForce(board, side, movesLeft - 1) >= 0;
+      board[only] = 0;
+    }
+    board[index] = 0;
+    if (forced) return index;
+  }
+  return -1;
+}
+
+/** Cost of the opponent's best reply: a win, a double threat, or their best shape. */
+function replyCost(board: Uint8Array, side: Side): number {
+  const wins = winSquares(board, side);
+  if (wins.length >= 2) return 1_000_000_000;
+  if (wins.length === 1) return 80_000_000;
+  const best = rank(board, candidates(board), side);
+  return best.score;
+}
+
 function rank(board: Uint8Array, cells: number[], me: Side): Ranked {
   const opp = opponent(me);
   const mid = (SIZE - 1) / 2;
@@ -178,7 +231,12 @@ function rank(board: Uint8Array, cells: number[], me: Side): Ranked {
   return best ?? { index: cells[0] ?? -1, score: 0, mine: 0, theirs: 0 };
 }
 
-function pack(kind: Kind, ranked: Ranked, fork?: Fork | null): Decision {
+function pack(kind: Kind, ranked: Ranked, fork?: Fork | null, note?: string): Decision {
+  const built = packBody(kind, ranked, fork);
+  return note ? { ...built, note } : built;
+}
+
+function packBody(kind: Kind, ranked: Ranked, fork?: Fork | null): Decision {
   if (kind === "win") {
     return {
       index: ranked.index,
@@ -262,7 +320,39 @@ export function decide(source: Uint8Array, me: Side): Decision {
   }
   if (blocks.length > 0) return pack("block-fork", rank(board, blocks, me));
 
-  return pack("pressure", rank(board, cells, me));
+  const force = findForce(board, me, 2);
+  if (force >= 0) {
+    return pack("fork", rank(board, [force], me), null, "Đọc trước một nước đáp. Nước này ép: họ chặn một chỗ, chỗ kia vẫn thành năm hoặc đòn đôi.");
+  }
+
+  const oppForce = findForce(board, opp, 2);
+  if (oppForce >= 0) {
+    return pack("block-fork", rank(board, [oppForce], me), null, "Đối thủ có nước ép. Giữ ô đó trước khi họ đánh.");
+  }
+
+  const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, 16);
+  let best: Ranked | null = null;
+  let bestBias = -Infinity;
+  const mid = (SIZE - 1) / 2;
+  for (const index of seeded) {
+    const mine = shapeScore(board, index, me);
+    board[index] = me;
+    const cost = replyCost(board, opp);
+    board[index] = 0;
+    const score = mine >= 1_000_000_000 ? mine : mine - cost * DEFENSE;
+    const bias = -((rowOf(index) - mid) ** 2 + (colOf(index) - mid) ** 2);
+    if (!best || score > best.score || (score === best.score && bias > bestBias)) {
+      best = { index, score, mine, theirs: cost };
+      bestBias = bias;
+    }
+  }
+  const ranked = best ?? rank(board, cells, me);
+  return pack(
+    "pressure",
+    ranked,
+    null,
+    `Đọc trước một nước đáp. Đòn ta: ${band(ranked.mine)}. Đòn địch: ${band(ranked.theirs)}.`,
+  );
 }
 
 export { WIN };

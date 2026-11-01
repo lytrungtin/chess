@@ -60,6 +60,19 @@ assert(fork.kind === "fork", `expected fork, got ${fork.kind}`);
 const deny = decide(forkBoard, 2);
 assert(deny.index === cell(7, 7) && deny.kind === "block-fork", `deny fork, got ${deny.index} ${deny.kind}`);
 
+const forceBoard = place([
+  [2, 1, 2],
+  [2, 2, 1],
+  [2, 3, 1],
+  [2, 4, 1],
+  [3, 5, 1],
+  [4, 5, 1],
+]);
+const forced = decide(forceBoard, 1);
+assert(forced.index === cell(2, 5), `force square, got ${forced.index} ${forced.kind}`);
+assert(forced.kind === "fork", `expected forcing fork, got ${forced.kind}`);
+assert(forced.note.includes("một nước đáp"), "force should say it read a reply");
+
 const beside = place([[7, 7, 1]]);
 const reply = decide(beside, 2);
 const rr = Math.floor(reply.index / SIZE);
