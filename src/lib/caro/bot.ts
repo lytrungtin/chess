@@ -202,7 +202,7 @@ type SearchBudget = { nodes: number; start: number };
  * Every forced reply must still lose, or it is not a force.
  */
 function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: SearchBudget): number {
-  if (budget.nodes > 14000 || Date.now() - budget.start > 320) return -1;
+  if (budget.nodes > 14000 || Date.now() - budget.start > 420) return -1;
   const opp = opponent(side);
   const ordered = candidates(board)
     .map((index) => ({ index, score: shapeScore(board, index, side) }))
@@ -262,7 +262,7 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
     .slice(0, 3);
   let worst = Infinity;
   for (const reply of replies) {
-    if (budget.nodes > 18000 || Date.now() - budget.start > 420) break;
+    if (budget.nodes > 18000 || Date.now() - budget.start > 520) break;
     budget.nodes += 1;
     board[reply.cell] = opp;
     const follows = candidates(board)
