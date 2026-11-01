@@ -80,8 +80,22 @@ assert(take.to === at(0, 7), `bot should take the hanging rook, went ${take.from
 
 const openT = Date.now();
 const opening = decide(startBoard(), "r");
-console.log("opening decision", opening.title, opening.note, `${Date.now() - openT}ms`);
+const openMs = Date.now() - openT;
+console.log("opening decision", opening.title, opening.note, `${openMs}ms`);
 assert(opening.from >= 0, "opening move exists");
+assert(openMs < 500, `opening think too slow: ${openMs}ms`);
+assert(opening.note.includes("2 nước đáp"), `should read two replies, got ${opening.note}`);
+const opener = startBoard()[opening.from];
+assert(opener && (opener.kind === "C" || opener.kind === "H"), "opening develops cannon or horse");
+assert(opening.to !== at(1, 0) && opening.to !== at(7, 0), "does not give a cannon for a horse");
+
+const two = Array.from({ length: 90 }, () => null) as Board;
+put(two, 4, 0, { side: "b", kind: "K" });
+put(two, 3, 9, { side: "r", kind: "K" });
+put(two, 0, 4, { side: "r", kind: "R" });
+put(two, 8, 2, { side: "r", kind: "R" });
+const forced = decide(two, "r");
+assert(forced.kind === "mate" || forced.kind === "press", `two-rook net should force, got ${forced.kind}`);
 
 const game = emptyGame();
 assert(legalMoves(game.board, "r").length === redMoves.length, "fresh game matches");
