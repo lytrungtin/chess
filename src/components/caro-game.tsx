@@ -105,6 +105,7 @@ export function CaroGame() {
   const [hydrated, setHydrated] = useState(false);
   const gameRef = useRef(game);
   const audioRef = useRef<AudioContext | null>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   gameRef.current = game;
 
   useEffect(() => {
@@ -202,6 +203,22 @@ export function CaroGame() {
 
   const thinking = vsBot && !game.winner && !game.draw && game.turn !== human;
   const last = game.moves[game.moves.length - 1]?.index ?? -1;
+
+  useEffect(() => {
+    const frame = frameRef.current;
+    if (!frame) return;
+    const target = last >= 0 ? last : Math.floor(SIZE / 2) * SIZE + Math.floor(SIZE / 2);
+    const cell = frame.querySelector(`[data-index="${target}"]`);
+    if (!(cell instanceof HTMLElement)) return;
+    const run = () => {
+      const cellRect = cell.getBoundingClientRect();
+      const frameRect = frame.getBoundingClientRect();
+      frame.scrollLeft += cellRect.left - frameRect.left - frame.clientWidth / 2 + cell.offsetWidth / 2;
+      frame.scrollTop += cellRect.top - frameRect.top - frame.clientHeight / 2 + cell.offsetHeight / 2;
+    };
+    requestAnimationFrame(run);
+  }, [last, game.gen]);
+
   const win = new Set(game.line);
   const toMove: Side = game.turn;
   const yourTurn = !vsBot || toMove === human;
@@ -233,11 +250,12 @@ export function CaroGame() {
         </p>
         {thinking ? <div className="think-bar mb-3" /> : <div className="mb-3 h-0.5" />}
 
+        <div className="caro-frame" ref={frameRef}>
         <div
           className="caro-board"
           role="group"
           aria-label={`Bàn cờ caro ${SIZE} nhân ${SIZE}`}
-          style={{ gridTemplateColumns: `repeat(${SIZE}, minmax(0, 1fr))` }}
+          style={{ gridTemplateColumns: `repeat(${SIZE}, var(--caro-cell))` }}
         >
           {Array.from({ length: SIZE * SIZE }, (_, index) => {
             const value = game.board[index] as 0 | Side;
@@ -248,6 +266,8 @@ export function CaroGame() {
               <button
                 key={index}
                 type="button"
+                data-index={index}
+                data-side={value === 0 && !locked ? toMove : undefined}
                 className={clsx(
                   "caro-cell",
                   win.has(index) && "is-win",
@@ -269,17 +289,14 @@ export function CaroGame() {
                     side={value}
                     className={clsx("caro-mark", value === 1 ? "text-mark-x" : "text-mark-o")}
                   />
-                ) : !locked ? (
-                  <Mark
-                    side={toMove}
-                    className={clsx("caro-ghost", toMove === 1 ? "text-mark-x" : "text-mark-o")}
-                  />
                 ) : null}
                 {index === last ? <span className="caro-last" /> : null}
               </button>
             );
           })}
         </div>
+        </div>
+        <p className="mt-2 text-xs text-paper/50">Kéo bàn để xem ô ngoài khung. Nước vừa đi được kéo vào giữa.</p>
       </section>
 
       <aside className="flex flex-col gap-3 lg:sticky lg:top-4">

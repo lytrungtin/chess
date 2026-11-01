@@ -43,24 +43,32 @@
 }
 
 @layer components {
-  .caro-board {
-    display: grid;
-    width: 100%;
-    gap: 1px;
-    padding: 1px;
+  .caro-frame {
+    overflow: auto;
+    max-height: min(78dvh, 860px);
     border-radius: var(--radius-board);
     background: color-mix(in srgb, var(--color-ink) 28%, var(--color-paper));
     box-shadow:
       0 1px 0 color-mix(in srgb, var(--color-paper) 30%, transparent),
       0 18px 40px color-mix(in srgb, black 35%, transparent);
-    touch-action: manipulation;
+    touch-action: pan-x pan-y;
+  }
+
+  .caro-board {
+    --caro-cell: 30px;
+    display: grid;
+    width: max-content;
+    gap: 1px;
+    padding: 1px;
+    background: color-mix(in srgb, var(--color-ink) 28%, var(--color-paper));
   }
 
   .caro-cell {
     position: relative;
     display: grid;
     place-items: center;
-    aspect-ratio: 1;
+    width: var(--caro-cell);
+    height: var(--caro-cell);
     margin: 0;
     padding: 0;
     border: 0;
@@ -105,15 +113,49 @@
     animation: stone-in 160ms ease-out;
   }
 
-  .caro-ghost {
-    width: 62%;
-    height: 62%;
-    opacity: 0;
+  .caro-cell[data-side]:not(:disabled):hover::after,
+  .caro-cell[data-side]:not(:disabled):focus-visible::after {
+    content: "";
+    width: 46%;
+    height: 46%;
+    border: 2px solid currentColor;
+    opacity: 0.4;
+    pointer-events: none;
   }
 
-  .caro-cell:not(:disabled):hover .caro-ghost,
-  .caro-cell:not(:disabled):focus-visible .caro-ghost {
-    opacity: 0.35;
+  .caro-cell[data-side="1"] {
+    color: var(--color-mark-x);
+  }
+
+  .caro-cell[data-side="1"]:not(:disabled):hover::after,
+  .caro-cell[data-side="1"]:not(:disabled):focus-visible::after {
+    width: 52%;
+    height: 2px;
+    border: 0;
+    background: currentColor;
+    box-shadow: 0 0 0 0 currentColor;
+    transform: rotate(45deg);
+  }
+
+  .caro-cell[data-side="1"]:not(:disabled):hover::before,
+  .caro-cell[data-side="1"]:not(:disabled):focus-visible::before {
+    content: "";
+    position: absolute;
+    width: 52%;
+    height: 2px;
+    background: currentColor;
+    opacity: 0.4;
+    transform: rotate(-45deg);
+    pointer-events: none;
+  }
+
+  .caro-cell[data-side="2"] {
+    color: var(--color-mark-o);
+  }
+
+  .caro-cell[data-side="2"]:not(:disabled):hover::after,
+  .caro-cell[data-side="2"]:not(:disabled):focus-visible::after {
+    border-radius: 50%;
   }
 
   .caro-last {
