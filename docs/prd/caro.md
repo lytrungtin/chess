@@ -36,7 +36,7 @@ Tỷ số thắng / thua / hòa với bot giữ trong `localStorage`, khóa `car
 
 - Không xếp hạng máy chủ.
 - Không luật cấm nước, không renju.
-- Không chọn độ khó. Bot đọc trước mười nước đáp, có năm giây để nghĩ.
+- Không chọn độ khó. Bot đọc trước mười nước đáp, có mười giây để nghĩ.
 
 ## Tiêu chí nhận
 

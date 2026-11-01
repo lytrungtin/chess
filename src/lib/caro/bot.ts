@@ -28,10 +28,10 @@ type Profile = {
   read: string;
 };
 
-/** Fixed: ten replies, five seconds. No difficulty choice. */
+/** Fixed: ten replies, ten seconds. No difficulty choice. */
 const PROFILE: Profile = {
   forceMoves: 11,
-  ms: 5_000,
+  ms: 10_000,
   nodes: 80_000,
   forceBeam: 28,
   pressure: 16,
