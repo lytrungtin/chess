@@ -41,3 +41,123 @@
     }
   }
 }
+
+@layer components {
+  .caro-board {
+    display: grid;
+    width: 100%;
+    gap: 1px;
+    padding: 1px;
+    border-radius: var(--radius-board);
+    background: color-mix(in srgb, var(--color-ink) 28%, var(--color-paper));
+    box-shadow:
+      0 1px 0 color-mix(in srgb, var(--color-paper) 30%, transparent),
+      0 18px 40px color-mix(in srgb, black 35%, transparent);
+    touch-action: manipulation;
+  }
+
+  .caro-cell {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .caro-cell:first-child {
+    border-top-left-radius: calc(var(--radius-board) - 1px);
+  }
+
+  .caro-cell:nth-child(15) {
+    border-top-right-radius: calc(var(--radius-board) - 1px);
+  }
+
+  .caro-cell:nth-child(211) {
+    border-bottom-left-radius: calc(var(--radius-board) - 1px);
+  }
+
+  .caro-cell:last-child {
+    border-bottom-right-radius: calc(var(--radius-board) - 1px);
+  }
+
+  .caro-cell:focus-visible {
+    outline: 2px solid var(--color-mark-x);
+    outline-offset: -2px;
+    z-index: 1;
+  }
+
+  .caro-cell:disabled {
+    cursor: default;
+  }
+
+  .caro-cell.is-win {
+    background: color-mix(in srgb, var(--color-mark-x) 22%, var(--color-paper));
+  }
+
+  .caro-mark {
+    width: 62%;
+    height: 62%;
+    animation: stone-in 160ms ease-out;
+  }
+
+  .caro-ghost {
+    width: 62%;
+    height: 62%;
+    opacity: 0;
+  }
+
+  .caro-cell:not(:disabled):hover .caro-ghost,
+  .caro-cell:not(:disabled):focus-visible .caro-ghost {
+    opacity: 0.35;
+  }
+
+  .caro-last {
+    position: absolute;
+    bottom: 8%;
+    width: 18%;
+    height: 8%;
+    min-width: 4px;
+    min-height: 3px;
+    border-radius: 999px;
+    background: var(--color-mark-x);
+  }
+
+  .think-bar {
+    height: 2px;
+    width: 100%;
+    transform-origin: left;
+    background: var(--color-mark-x);
+    animation: think 900ms ease-in-out infinite;
+  }
+}
+
+@keyframes stone-in {
+  from {
+    transform: scale(0.55);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes think {
+  0% {
+    transform: scaleX(0.15);
+    opacity: 0.4;
+  }
+  50% {
+    transform: scaleX(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scaleX(0.15);
+    opacity: 0.4;
+  }
+}

@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Cờ";
+const APP_NAME = "Cờ Caro";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -13,7 +13,7 @@ export const Route = createRootRoute({
       { title: APP_NAME },
       {
         name: "description",
-        content: "Cờ.",
+        content: "Cờ caro 15×15 với bot Áp Lực: thắng ngay, chặn ngay, và đánh theo độ gần năm quân.",
       },
       { name: "theme-color", content: "#241e18" },
     ],

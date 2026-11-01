@@ -1,11 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CaroGame } from "@/components/caro-game";
 
 export const Route = createFileRoute("/")({ component: Home });
 
 function Home() {
-  return (
-    <main className="mx-auto max-w-6xl px-6 py-10 text-paper">
-      <h1 className="font-display text-4xl">Cờ</h1>
-    </main>
-  );
+  return <CaroGame />;
 }
