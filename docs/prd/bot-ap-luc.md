@@ -35,7 +35,7 @@ Người chơi một mình trên trình duyệt, tiếng Việt, không đăng n
 4. Nếu địch sắp có đòn đôi → chặn ô đó.
 5. Còn lại → áp lực theo quãng, có trần để không all-in.
 
-Caro làm thắng, chặn và đòn đôi bằng khớp hình, rồi đọc một nước đáp. Tướng làm 1 bằng quét chiếu hết một nước, 2–5 bằng tìm kiếm có điểm.
+Caro làm thắng, chặn và đòn đôi bằng khớp hình, rồi đọc hai nước đáp trên nước ép. Tướng làm 1 bằng quét chiếu hết một nước, 2–5 bằng tìm kiếm có điểm.
 
 ## Tiêu chí nhận
 

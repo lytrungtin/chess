@@ -165,19 +165,53 @@ function winSquares(board: Uint8Array, side: Side): number[] {
   return out;
 }
 
+/** Extension squares of a straight open three through `index`. */
+function threeExtensions(board: Uint8Array, index: number, side: Side): number[] {
+  const out: number[] = [];
+  const row = rowOf(index);
+  const col = colOf(index);
+  for (const [dr, dc] of DIRS) {
+    let neg = 0;
+    let pos = 0;
+    let r = row - dr;
+    let c = col - dc;
+    while (inBounds(r, c) && board[r * SIZE + c] === side) {
+      neg += 1;
+      r -= dr;
+      c -= dc;
+    }
+    const negEnd = inBounds(r, c) && board[r * SIZE + c] === 0 ? r * SIZE + c : -1;
+    r = row + dr;
+    c = col + dc;
+    while (inBounds(r, c) && board[r * SIZE + c] === side) {
+      pos += 1;
+      r += dr;
+      c += dc;
+    }
+    const posEnd = inBounds(r, c) && board[r * SIZE + c] === 0 ? r * SIZE + c : -1;
+    if (1 + neg + pos === 3 && negEnd >= 0 && posEnd >= 0) out.push(negEnd, posEnd);
+  }
+  return out;
+}
+
+type SearchBudget = { nodes: number; start: number };
+
 /**
- * A forcing win: a move that leaves one block, and after that block
- * we still have a five or a double threat. Quiet moves are ignored.
+ * Forcing win over `movesLeft` of our moves.
+ * A four leaves one block. An open three leaves two extensions.
+ * Every forced reply must still lose, or it is not a force.
  */
-function findForce(board: Uint8Array, side: Side, movesLeft: number): number {
+function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: SearchBudget): number {
+  if (budget.nodes > 6000 || Date.now() - budget.start > 180) return -1;
   const opp = opponent(side);
-  const cells = candidates(board);
-  const ordered = cells
+  const ordered = candidates(board)
     .map((index) => ({ index, score: shapeScore(board, index, side) }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10);
 
   for (const { index, score } of ordered) {
-    if (score < 40_000) break;
+    if (score < 8_000) break;
+    budget.nodes += 1;
     if (createsWinAt(board, index, side)) return index;
     board[index] = side;
     let wins = 0;
@@ -189,15 +223,76 @@ function findForce(board: Uint8Array, side: Side, movesLeft: number): number {
       if (wins >= 2) break;
     }
     let forced = wins >= 2;
-    if (!forced && wins === 1 && movesLeft > 1) {
+    if (!forced && movesLeft > 1 && wins === 1) {
       board[only] = opp;
-      forced = findForce(board, side, movesLeft - 1) >= 0;
+      forced = findForce(board, side, movesLeft - 1, budget) >= 0;
       board[only] = 0;
+    } else if (!forced && movesLeft > 1 && wins === 0) {
+      const exts = [...new Set(threeExtensions(board, index, side))];
+      if (exts.length >= 2 && exts.length <= 4) {
+        forced = true;
+        for (const ext of exts) {
+          board[ext] = opp;
+          const lost = findForce(board, side, movesLeft - 1, budget) >= 0;
+          board[ext] = 0;
+          if (!lost) {
+            forced = false;
+            break;
+          }
+        }
+      }
     }
     board[index] = 0;
     if (forced) return index;
   }
   return -1;
+}
+
+/** Two replies on one candidate: my move, their best tries, my follow-up. */
+function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudget): number {
+  const opp = opponent(me);
+  board[index] = me;
+  if (winSquares(board, opp).length > 0) {
+    board[index] = 0;
+    return -1_000_000_000;
+  }
+  const replies = candidates(board)
+    .map((cell) => ({ cell, score: shapeScore(board, cell, opp) }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2);
+  let worst = Infinity;
+  for (const reply of replies) {
+    if (budget.nodes > 8000 || Date.now() - budget.start > 260) break;
+    budget.nodes += 1;
+    board[reply.cell] = opp;
+    const follows = candidates(board)
+      .map((cell) => ({ cell, score: shapeScore(board, cell, me) }))
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 2);
+    let bestFollow = -Infinity;
+    for (const follow of follows) {
+      if (createsWinAt(board, follow.cell, me)) {
+        bestFollow = 1_000_000_000;
+        break;
+      }
+      board[follow.cell] = me;
+      const blown = winSquares(board, opp).length > 0;
+      let oppBest = 0;
+      if (!blown) {
+        for (const cell of candidates(board).slice(0, 12)) {
+          const score = shapeScore(board, cell, opp);
+          if (score > oppBest) oppBest = score;
+          if (oppBest >= 8_000_000) break;
+        }
+      }
+      board[follow.cell] = 0;
+      bestFollow = Math.max(bestFollow, follow.score - (blown ? 1_000_000_000 : oppBest) * DEFENSE);
+    }
+    board[reply.cell] = 0;
+    if (bestFollow < worst) worst = bestFollow;
+  }
+  board[index] = 0;
+  return worst === Infinity ? -1_000_000_000 : worst;
 }
 
 /** Cost of the opponent's best reply: a win, a double threat, or their best shape. */
@@ -320,29 +415,27 @@ export function decide(source: Uint8Array, me: Side): Decision {
   }
   if (blocks.length > 0) return pack("block-fork", rank(board, blocks, me));
 
-  const force = findForce(board, me, 2);
+  const budget: SearchBudget = { nodes: 0, start: Date.now() };
+  const force = findForce(board, me, 3, budget);
   if (force >= 0) {
-    return pack("fork", rank(board, [force], me), null, "Đọc trước một nước đáp. Nước này ép: họ chặn một chỗ, chỗ kia vẫn thành năm hoặc đòn đôi.");
+    return pack("fork", rank(board, [force], me), null, "Đọc trước hai nước đáp trên nước ép. Họ chặn một chỗ, nước sau vẫn thành năm hoặc đòn đôi.");
   }
 
-  const oppForce = findForce(board, opp, 2);
+  const oppForce = findForce(board, opp, 3, budget);
   if (oppForce >= 0) {
-    return pack("block-fork", rank(board, [oppForce], me), null, "Đối thủ có nước ép. Giữ ô đó trước khi họ đánh.");
+    return pack("block-fork", rank(board, [oppForce], me), null, "Đối thủ có nước ép trong hai nước đáp. Giữ ô đó trước khi họ đánh.");
   }
 
-  const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, 16);
+  const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, 6);
   let best: Ranked | null = null;
   let bestBias = -Infinity;
   const mid = (SIZE - 1) / 2;
   for (const index of seeded) {
     const mine = shapeScore(board, index, me);
-    board[index] = me;
-    const cost = replyCost(board, opp);
-    board[index] = 0;
-    const score = mine >= 1_000_000_000 ? mine : mine - cost * DEFENSE;
+    const score = twoReply(board, index, me, budget);
     const bias = -((rowOf(index) - mid) ** 2 + (colOf(index) - mid) ** 2);
     if (!best || score > best.score || (score === best.score && bias > bestBias)) {
-      best = { index, score, mine, theirs: cost };
+      best = { index, score, mine, theirs: Math.max(0, -score) };
       bestBias = bias;
     }
   }
@@ -351,7 +444,7 @@ export function decide(source: Uint8Array, me: Side): Decision {
     "pressure",
     ranked,
     null,
-    `Đọc trước một nước đáp. Đòn ta: ${band(ranked.mine)}. Đòn địch: ${band(ranked.theirs)}.`,
+    `Đọc trước hai nước đáp. Đòn ta: ${band(ranked.mine)}.`,
   );
 }
 
