@@ -71,7 +71,7 @@ const forceBoard = place([
 const forced = decide(forceBoard, 1);
 assert(forced.index === cell(2, 5), `force square, got ${forced.index} ${forced.kind}`);
 assert(forced.kind === "fork", `expected forcing fork, got ${forced.kind}`);
-assert(/hai nước đáp/.test(forced.note), `force should say two replies, got ${forced.note}`);
+assert(/ba nước đáp/.test(forced.note), `force should say three replies, got ${forced.note}`);
 
 const beside = place([[7, 7, 1]]);
 const reply = decide(beside, 2);

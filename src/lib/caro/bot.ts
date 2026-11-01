@@ -202,12 +202,12 @@ type SearchBudget = { nodes: number; start: number };
  * Every forced reply must still lose, or it is not a force.
  */
 function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: SearchBudget): number {
-  if (budget.nodes > 6000 || Date.now() - budget.start > 180) return -1;
+  if (budget.nodes > 14000 || Date.now() - budget.start > 320) return -1;
   const opp = opponent(side);
   const ordered = candidates(board)
     .map((index) => ({ index, score: shapeScore(board, index, side) }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 10);
+    .slice(0, 14);
 
   for (const { index, score } of ordered) {
     if (score < 8_000) break;
@@ -259,16 +259,16 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
   const replies = candidates(board)
     .map((cell) => ({ cell, score: shapeScore(board, cell, opp) }))
     .sort((a, b) => b.score - a.score)
-    .slice(0, 2);
+    .slice(0, 3);
   let worst = Infinity;
   for (const reply of replies) {
-    if (budget.nodes > 8000 || Date.now() - budget.start > 260) break;
+    if (budget.nodes > 18000 || Date.now() - budget.start > 420) break;
     budget.nodes += 1;
     board[reply.cell] = opp;
     const follows = candidates(board)
       .map((cell) => ({ cell, score: shapeScore(board, cell, me) }))
       .sort((a, b) => b.score - a.score)
-      .slice(0, 2);
+      .slice(0, 3);
     let bestFollow = -Infinity;
     for (const follow of follows) {
       if (createsWinAt(board, follow.cell, me)) {
@@ -416,17 +416,17 @@ export function decide(source: Uint8Array, me: Side): Decision {
   if (blocks.length > 0) return pack("block-fork", rank(board, blocks, me));
 
   const budget: SearchBudget = { nodes: 0, start: Date.now() };
-  const force = findForce(board, me, 3, budget);
+  const force = findForce(board, me, 4, budget);
   if (force >= 0) {
-    return pack("fork", rank(board, [force], me), null, "Đọc trước hai nước đáp trên nước ép. Họ chặn một chỗ, nước sau vẫn thành năm hoặc đòn đôi.");
+    return pack("fork", rank(board, [force], me), null, "Đọc trước ba nước đáp trên nước ép. Họ chặn một chỗ, nước sau vẫn thành năm hoặc đòn đôi.");
   }
 
-  const oppForce = findForce(board, opp, 3, budget);
+  const oppForce = findForce(board, opp, 4, budget);
   if (oppForce >= 0) {
-    return pack("block-fork", rank(board, [oppForce], me), null, "Đối thủ có nước ép trong hai nước đáp. Giữ ô đó trước khi họ đánh.");
+    return pack("block-fork", rank(board, [oppForce], me), null, "Đối thủ có nước ép trong ba nước đáp. Giữ ô đó trước khi họ đánh.");
   }
 
-  const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, 6);
+  const seeded = [...cells].sort((a, b) => shapeScore(board, b, me) - shapeScore(board, a, me)).slice(0, 8);
   let best: Ranked | null = null;
   let bestBias = -Infinity;
   const mid = (SIZE - 1) / 2;
@@ -444,7 +444,7 @@ export function decide(source: Uint8Array, me: Side): Decision {
     "pressure",
     ranked,
     null,
-    `Đọc trước hai nước đáp. Đòn ta: ${band(ranked.mine)}.`,
+    `Đọc trước ba nước đáp. Đòn ta: ${band(ranked.mine)}.`,
   );
 }
 
