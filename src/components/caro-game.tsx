@@ -14,11 +14,12 @@ import {
 } from "@/lib/caro/rules";
 
 const STORAGE_KEY = "caro-ap-luc-v1";
-const LEVEL_KEY = "caro-level-v1";
+const LEVEL_KEY = "caro-level-v2";
 const LEVELS: { id: Level; label: string }[] = [
   { id: "de", label: "Dễ" },
   { id: "vua", label: "Vừa" },
   { id: "kho", label: "Khó" },
+  { id: "expert", label: "Expert" },
 ];
 
 type RecordScore = { win: number; loss: number; draw: number };
@@ -37,7 +38,7 @@ const PRINCIPLES: { kinds: Kind[]; title: string; body: string }[] = [
   {
     kinds: ["pressure"],
     title: "Áp lực tỷ lệ",
-    body: "Mức Khó đọc trước bốn nước đáp. Ô nào gần năm hơn thì đáng đi hơn.",
+    body: "Mức Expert đọc trước năm nước đáp. Ô nào gần năm hơn thì đáng đi hơn.",
   },
   {
     kinds: ["pressure"],
@@ -107,7 +108,7 @@ export function CaroGame() {
   const [game, setGame] = useState<Snapshot>(emptyGame);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [sound, setSound] = useState(false);
-  const [level, setLevel] = useState<Level>("kho");
+  const [level, setLevel] = useState<Level>("expert");
   const [record, setRecord] = useState<RecordScore>({ win: 0, loss: 0, draw: 0 });
   const [hydrated, setHydrated] = useState(false);
   const gameRef = useRef(game);
@@ -118,7 +119,7 @@ export function CaroGame() {
   useEffect(() => {
     setRecord(loadRecord());
     const saved = localStorage.getItem(LEVEL_KEY);
-    if (saved === "de" || saved === "vua" || saved === "kho") setLevel(saved);
+    if (saved === "de" || saved === "vua" || saved === "kho" || saved === "expert") setLevel(saved);
     setHydrated(true);
   }, []);
 
@@ -332,7 +333,7 @@ export function CaroGame() {
           <p className="text-sm leading-relaxed text-ink/80">
             {decision
               ? decision.note
-              : "X đi trước. Mức Khó đọc trước bốn nước đáp trên nước ép: thắng thì đánh, bị thắng thì chặn, rồi mới ép."}
+              : "X đi trước. Mức Expert đọc trước năm nước đáp trên nước ép: thắng thì đánh, bị thắng thì chặn, rồi mới ép."}
           </p>
         </section>
 
@@ -369,7 +370,7 @@ export function CaroGame() {
               label="Bạn cầm O"
             />
           </div>
-          <div className="mt-2 grid grid-cols-3 gap-2">
+          <div className="mt-2 grid grid-cols-4 gap-2">
             {LEVELS.map((item) => (
               <Choice
                 key={item.id}

@@ -17,7 +17,7 @@ export type Decision = {
   note: string;
 };
 
-export type Level = "de" | "vua" | "kho";
+export type Level = "de" | "vua" | "kho" | "expert";
 
 type Profile = {
   forceMoves: number;
@@ -68,6 +68,18 @@ const PROFILES: Record<Level, Profile> = {
     pressureMs: 720,
     pressureNodes: 30000,
     read: "bốn nước đáp",
+  },
+  expert: {
+    forceMoves: 6,
+    forceMs: 820,
+    forceNodes: 36000,
+    forceBeam: 24,
+    pressure: 16,
+    replies: 5,
+    follows: 4,
+    pressureMs: 920,
+    pressureNodes: 44000,
+    read: "năm nước đáp",
   },
 };
 
@@ -436,7 +448,7 @@ function packBody(kind: Kind, ranked: Ranked, fork?: Fork | null): Decision {
  * otherwise bid their closeness plus a small defense margin,
  * never chasing a weak line while a closer threat exists.
  */
-export function decide(source: Uint8Array, me: Side, level: Level = "kho"): Decision {
+export function decide(source: Uint8Array, me: Side, level: Level = "expert"): Decision {
   const profile = PROFILES[level];
   const board = new Uint8Array(source);
   const opp = opponent(me);
