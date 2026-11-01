@@ -17,70 +17,27 @@ export type Decision = {
   note: string;
 };
 
-export type Level = "de" | "vua" | "kho" | "expert";
-
 type Profile = {
   forceMoves: number;
-  forceMs: number;
-  forceNodes: number;
+  ms: number;
+  nodes: number;
   forceBeam: number;
   pressure: number;
   replies: number;
   follows: number;
-  pressureMs: number;
-  pressureNodes: number;
   read: string;
 };
 
-const PROFILES: Record<Level, Profile> = {
-  de: {
-    forceMoves: 2,
-    forceMs: 180,
-    forceNodes: 4000,
-    forceBeam: 8,
-    pressure: 4,
-    replies: 1,
-    follows: 1,
-    pressureMs: 240,
-    pressureNodes: 6000,
-    read: "một nước đáp",
-  },
-  vua: {
-    forceMoves: 4,
-    forceMs: 420,
-    forceNodes: 14000,
-    forceBeam: 14,
-    pressure: 8,
-    replies: 3,
-    follows: 3,
-    pressureMs: 520,
-    pressureNodes: 18000,
-    read: "ba nước đáp",
-  },
-  kho: {
-    forceMoves: 5,
-    forceMs: 620,
-    forceNodes: 24000,
-    forceBeam: 18,
-    pressure: 12,
-    replies: 4,
-    follows: 3,
-    pressureMs: 720,
-    pressureNodes: 30000,
-    read: "bốn nước đáp",
-  },
-  expert: {
-    forceMoves: 6,
-    forceMs: 820,
-    forceNodes: 36000,
-    forceBeam: 24,
-    pressure: 16,
-    replies: 5,
-    follows: 4,
-    pressureMs: 920,
-    pressureNodes: 44000,
-    read: "năm nước đáp",
-  },
+/** Fixed: ten replies, five seconds. No difficulty choice. */
+const PROFILE: Profile = {
+  forceMoves: 11,
+  ms: 5_000,
+  nodes: 80_000,
+  forceBeam: 28,
+  pressure: 16,
+  replies: 5,
+  follows: 4,
+  read: "mười nước đáp",
 };
 
 const DIRS: ReadonlyArray<readonly [number, number]> = [
@@ -268,7 +225,7 @@ type SearchBudget = { nodes: number; start: number };
  * Every forced reply must still lose, or it is not a force.
  */
 function findForce(board: Uint8Array, side: Side, movesLeft: number, budget: SearchBudget, profile: Profile): number {
-  if (budget.nodes > profile.forceNodes || Date.now() - budget.start > profile.forceMs) return -1;
+  if (budget.nodes > profile.nodes || Date.now() - budget.start > profile.ms) return -1;
   const opp = opponent(side);
   const ordered = candidates(board)
     .map((index) => ({ index, score: shapeScore(board, index, side) }))
@@ -328,7 +285,7 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
     .slice(0, profile.replies);
   let worst = Infinity;
   for (const reply of replies) {
-    if (budget.nodes > profile.pressureNodes || Date.now() - budget.start > profile.pressureMs) break;
+    if (budget.nodes > profile.nodes || Date.now() - budget.start > profile.ms) break;
     budget.nodes += 1;
     board[reply.cell] = opp;
     const follows = candidates(board)
@@ -448,8 +405,8 @@ function packBody(kind: Kind, ranked: Ranked, fork?: Fork | null): Decision {
  * otherwise bid their closeness plus a small defense margin,
  * never chasing a weak line while a closer threat exists.
  */
-export function decide(source: Uint8Array, me: Side, level: Level = "expert"): Decision {
-  const profile = PROFILES[level];
+export function decide(source: Uint8Array, me: Side): Decision {
+  const profile = PROFILE;
   const board = new Uint8Array(source);
   const opp = opponent(me);
   const cells = candidates(board);

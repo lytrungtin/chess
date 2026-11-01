@@ -36,7 +36,7 @@ Tỷ số thắng / thua / hòa với bot giữ trong `localStorage`, khóa `car
 
 - Không xếp hạng máy chủ.
 - Không luật cấm nước, không renju.
-- Bốn mức: Dễ, Vừa, Khó, Expert. Expert đọc trước năm nước đáp trên các nước ép.
+- Không chọn độ khó. Bot đọc trước mười nước đáp, có năm giây để nghĩ.
 
 ## Tiêu chí nhận
 

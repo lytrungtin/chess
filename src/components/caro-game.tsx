@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { RotateCcw, Undo2, Volume2, VolumeX } from "lucide-react";
 import clsx from "clsx";
-import { decide, type Decision, type Kind, type Level } from "@/lib/caro/bot";
+import { decide, type Decision, type Kind } from "@/lib/caro/bot";
 import {
   SIZE,
   colOf,
@@ -14,13 +14,6 @@ import {
 } from "@/lib/caro/rules";
 
 const STORAGE_KEY = "caro-ap-luc-v1";
-const LEVEL_KEY = "caro-level-v2";
-const LEVELS: { id: Level; label: string }[] = [
-  { id: "de", label: "Dễ" },
-  { id: "vua", label: "Vừa" },
-  { id: "kho", label: "Khó" },
-  { id: "expert", label: "Expert" },
-];
 
 type RecordScore = { win: number; loss: number; draw: number };
 
@@ -38,7 +31,7 @@ const PRINCIPLES: { kinds: Kind[]; title: string; body: string }[] = [
   {
     kinds: ["pressure"],
     title: "Áp lực tỷ lệ",
-    body: "Mức Expert đọc trước năm nước đáp. Ô nào gần năm hơn thì đáng đi hơn.",
+    body: "Đọc trước mười nước đáp, trong năm giây. Ô nào gần năm hơn thì đáng đi hơn.",
   },
   {
     kinds: ["pressure"],
@@ -108,7 +101,6 @@ export function CaroGame() {
   const [game, setGame] = useState<Snapshot>(emptyGame);
   const [decision, setDecision] = useState<Decision | null>(null);
   const [sound, setSound] = useState(false);
-  const [level, setLevel] = useState<Level>("expert");
   const [record, setRecord] = useState<RecordScore>({ win: 0, loss: 0, draw: 0 });
   const [hydrated, setHydrated] = useState(false);
   const gameRef = useRef(game);
@@ -118,15 +110,8 @@ export function CaroGame() {
 
   useEffect(() => {
     setRecord(loadRecord());
-    const saved = localStorage.getItem(LEVEL_KEY);
-    if (saved === "de" || saved === "vua" || saved === "kho" || saved === "expert") setLevel(saved);
     setHydrated(true);
   }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    localStorage.setItem(LEVEL_KEY, level);
-  }, [level, hydrated]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -166,7 +151,7 @@ export function CaroGame() {
     const timer = window.setTimeout(() => {
       const prev = gameRef.current;
       if (prev.gen !== gen || prev.turn !== turn || prev.winner || prev.draw) return;
-      const choice = decide(prev.board, turn, level);
+      const choice = decide(prev.board, turn);
       if (choice.index < 0) return;
       setDecision(choice);
       publish(prev, playAt(prev, choice.index));
@@ -174,7 +159,7 @@ export function CaroGame() {
     return () => window.clearTimeout(timer);
     // publish closes over sound/vsBot/human; those are listed so a change reschedules.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [vsBot, human, sound, level, game.gen, game.turn, game.winner, game.draw, game.moves.length]);
+  }, [vsBot, human, sound, game.gen, game.turn, game.winner, game.draw, game.moves.length]);
 
   function onCell(index: number) {
     const prev = gameRef.current;
@@ -333,7 +318,7 @@ export function CaroGame() {
           <p className="text-sm leading-relaxed text-ink/80">
             {decision
               ? decision.note
-              : "X đi trước. Mức Expert đọc trước năm nước đáp trên nước ép: thắng thì đánh, bị thắng thì chặn, rồi mới ép."}
+              : "X đi trước. Bot đọc trước mười nước đáp, có năm giây để nghĩ: thắng thì đánh, bị thắng thì chặn, rồi mới ép."}
           </p>
         </section>
 
@@ -369,17 +354,6 @@ export function CaroGame() {
               }}
               label="Bạn cầm O"
             />
-          </div>
-          <div className="mt-2 grid grid-cols-4 gap-2">
-            {LEVELS.map((item) => (
-              <Choice
-                key={item.id}
-                pressed={level === item.id}
-                disabled={!vsBot}
-                onClick={() => setLevel(item.id)}
-                label={item.label}
-              />
-            ))}
           </div>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <button
