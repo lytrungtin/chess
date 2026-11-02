@@ -58,7 +58,7 @@ $$
 v \ge -\, v_{\text{null}}(d - R - 1),\quad R = 2
 $$
 
-Không dùng khi đang bị chiếu, ở gốc, hoặc sâu dưới 3. Không đệ quy null-move hai lần liền. Phép này **không đúng đắn**: có thế nó cắt nhầm. Đổi lấy tốc độ để còn ngân sách đọc sâu.
+Không dùng khi đang bị chiếu, ở gốc, hoặc sâu dưới 3. Không đệ quy null-move hai lần liền. Giảm hai tầng ($R=2$) thay vì ba, để 5 giây không cắt mất thế hết. Phép này **không đúng đắn**: có thế nó cắt nhầm.
 
 ### Độ phức tạp
 
@@ -163,7 +163,7 @@ search(sâu, α, β):
 
 Giảm muộn: từ nước tĩnh thứ 5 trở đi, ở sâu ≥ 3, giảm một tầng. Có thể lỡ nước tĩnh hay. Chấp nhận.
 
-Đọc sâu có chọn: sau vòng sâu 3 toàn bàn, lấy 6 nước điểm cao, tìm tiếp đến sâu 5 với `beam = 10`. Nước ăn vượt trần chùm vẫn được xét. Nước tĩnh ngoài chùm thì bỏ.
+Đọc sâu có chọn: lặp sâu toàn bàn đến khi hết 5 giây, tối đa sâu 8. Nếu còn giờ, 12 nước điểm cao được đọc tiếp đến sâu 10 với `beam = 16`. Nước ăn vượt trần chùm vẫn được xét. Nước tĩnh ngoài chùm thì bỏ. Nước tĩnh thứ 8 trở đi, từ sâu 4, bị giảm một tầng.
 
 ### Nhãn
 
@@ -208,7 +208,7 @@ Luật và bot tách nhau để test luật không cần bot, và để đổi t
 | Quyết định | Được | Mất |
 |---|---|---|
 | Caro heuristic, không minimax | Một nước tức thì, thấy đòn đôi | Không thấy bẫy ba nước |
-| Tướng sâu 3 toàn bàn + sâu 5 có chọn | Thấy ăn lại và một số hết quân dài | Nước đầu trông yếu nhưng về sau hay thì bị loại trước khi đọc sâu |
+| Tướng lặp sâu đến hết 5 giây, rồi sâu thêm 12 nước chính | Thấy ăn lại và hết quân dài hơn | Nước đầu trông yếu nhưng về sau hay thì bị loại trước khi đọc sâu |
 | Null-move | Sâu hơn trong 5 giây | Có thể cắt nhầm thế zugzwang |
 | Khóa Zobrist 32 bit | XOR nhanh | Đụng khóa hiếm |
 | Lặp ba lần = hòa | Dễ cắt ván vô hạn | Không đúng luật chiếu vĩnh viễn |

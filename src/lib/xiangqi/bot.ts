@@ -43,10 +43,10 @@ const VALUE: Record<Kind, number> = {
 const MATE = 100_000;
 const MATE_BOUND = 90_000;
 const BUDGET_MS = 5_000;
-const MAX_DEPTH = 3;
-const SELECT_DEPTH = 5;
-const SELECT_ROOT = 6;
-const BEAM = 10;
+const MAX_DEPTH = 8;
+const SELECT_DEPTH = 10;
+const SELECT_ROOT = 12;
+const BEAM = 16;
 const TT_BITS = 16;
 const TT_SIZE = 1 << TT_BITS;
 const TT_MASK = TT_SIZE - 1;
@@ -265,7 +265,7 @@ function search(
   const cached = lookup(hash, depth, alpha, beta, ply);
   if (cached != null) return cached;
   if (allowNull && !check && depth >= 3 && ply > 0 && beta < MATE_BOUND) {
-    const nullScore = -search(board, opponent(side), hash ^ ZSIDE, depth - 3, -beta, -beta + 1, ply + 1, beam, false);
+    const nullScore = -search(board, opponent(side), hash ^ ZSIDE, depth - 2, -beta, -beta + 1, ply + 1, beam, false);
     if (!aborted && nullScore >= beta) return nullScore;
   }
   const moves = legalMoves(board, side);
@@ -283,7 +283,7 @@ function search(
     const nextHash = hashAfter(hash, board, move, captured);
     let nextDepth = depth - 1;
     const quiet = !captured && !inCheck(board, opponent(side));
-    if (quiet && i >= 4 && depth >= 3) nextDepth -= 1;
+    if (quiet && i >= 8 && depth >= 4) nextDepth -= 1;
     const score = -search(board, opponent(side), nextHash, nextDepth, -beta, -alpha, ply + 1, beam, true);
     undoMutable(board, move, captured);
     if (aborted) return 0;

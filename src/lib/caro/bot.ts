@@ -28,15 +28,15 @@ type Profile = {
   read: string;
 };
 
-/** Fixed: ten replies, five seconds. No difficulty choice. */
+/** Fixed: ten replies, five seconds. Wider beams so the clock, not the old cap, stops the search. */
 const PROFILE: Profile = {
   forceMoves: 11,
   ms: 5_000,
-  nodes: 80_000,
-  forceBeam: 28,
-  pressure: 16,
-  replies: 5,
-  follows: 4,
+  nodes: 400_000,
+  forceBeam: 48,
+  pressure: 24,
+  replies: 8,
+  follows: 6,
   read: "mười nước đáp",
 };
 
@@ -282,7 +282,7 @@ function findForce(
 
   for (const { index, score } of ordered) {
     if (score < 8_000) break;
-    if (top >= 800_000 && score < 40_000) break;
+    if (top >= 8_000_000 && score < 40_000) break;
     budget.nodes += 1;
     if (createsWinAt(board, index, side)) {
       remember(slot, key, movesLeft, index, budget);
@@ -359,7 +359,7 @@ function twoReply(board: Uint8Array, index: number, me: Side, budget: SearchBudg
       const blown = winSquares(board, opp).length > 0;
       let oppBest = 0;
       if (!blown) {
-        for (const cell of candidates(board).slice(0, 12)) {
+        for (const cell of candidates(board).slice(0, 24)) {
           const score = shapeScore(board, cell, opp);
           if (score > oppBest) oppBest = score;
           if (oppBest >= 8_000_000) break;
@@ -516,7 +516,7 @@ export function decide(source: Uint8Array, me: Side): Decision {
   const mid = (SIZE - 1) / 2;
   seeded.forEach((index, nth) => {
     const mine = shapeScore(board, index, me);
-    const score = twoReply(board, index, me, budget, profile, alpha, nth >= 6 ? 2 : profile.replies);
+    const score = twoReply(board, index, me, budget, profile, alpha, nth >= 12 ? 3 : profile.replies);
     const bias = -((rowOf(index) - mid) ** 2 + (colOf(index) - mid) ** 2);
     if (!best || score > best.score || (score === best.score && bias > bestBias)) {
       best = { index, score, mine, theirs: Math.max(0, -score) };

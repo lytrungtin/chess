@@ -51,7 +51,7 @@ Tỷ số giữ trong `localStorage`, khóa `xiangqi-ap-luc-v1`.
 
 - Không sách khai cuộc, không tàn cuộc bảng.
 - Không UCI, không máy chủ.
-- Không đọc hết bàn sâu hơn hai nước — chỉ sâu thêm ở nước chính, trong 5 giây.
+- Đọc sâu đến khi hết 5 giây. Nước chính được xét rộng hơn, không cắt sớm như mức nửa giây.
 
 ## Tiêu chí nhận
 
