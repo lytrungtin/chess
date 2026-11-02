@@ -4,6 +4,7 @@ import {
   emptyGame,
   kingsFace,
   legalMoves,
+  playMutable,
   startBoard,
   type Board,
   type Piece,
@@ -96,6 +97,41 @@ put(two, 0, 4, { side: "r", kind: "R" });
 put(two, 8, 2, { side: "r", kind: "R" });
 const forced = decide(two, "r");
 assert(forced.kind === "mate" || forced.kind === "press", `two-rook net should force, got ${forced.kind}`);
+
+const loose = Array.from({ length: 90 }, () => null) as Board;
+put(loose, 1, 0, { side: "b", kind: "R" });
+put(loose, 3, 0, { side: "b", kind: "A" });
+put(loose, 4, 0, { side: "b", kind: "K" });
+put(loose, 4, 1, { side: "b", kind: "A" });
+put(loose, 3, 2, { side: "b", kind: "C" });
+put(loose, 4, 2, { side: "b", kind: "E" });
+put(loose, 7, 2, { side: "b", kind: "C" });
+put(loose, 0, 4, { side: "b", kind: "P" });
+put(loose, 2, 4, { side: "b", kind: "P" });
+put(loose, 6, 4, { side: "b", kind: "R" });
+put(loose, 3, 5, { side: "b", kind: "H" });
+put(loose, 6, 6, { side: "b", kind: "H" });
+put(loose, 8, 3, { side: "r", kind: "R" });
+put(loose, 2, 5, { side: "r", kind: "C" });
+put(loose, 0, 6, { side: "r", kind: "P" });
+put(loose, 2, 6, { side: "r", kind: "P" });
+put(loose, 4, 6, { side: "r", kind: "P" });
+put(loose, 8, 6, { side: "r", kind: "P" });
+put(loose, 6, 7, { side: "r", kind: "H" });
+put(loose, 0, 9, { side: "r", kind: "R" });
+put(loose, 1, 9, { side: "r", kind: "H" });
+put(loose, 2, 9, { side: "r", kind: "E" });
+put(loose, 3, 9, { side: "r", kind: "A" });
+put(loose, 4, 9, { side: "r", kind: "K" });
+put(loose, 5, 9, { side: "r", kind: "A" });
+put(loose, 6, 9, { side: "r", kind: "E" });
+const saved = decide(loose, "r");
+const afterSave = loose.slice();
+playMutable(afterSave, saved);
+const pawnTakesCannon = legalMoves(afterSave, "b").some(
+  (move) => afterSave[move.from]?.kind === "P" && afterSave[move.to]?.kind === "C",
+);
+assert(!pawnTakesCannon, `left the cannon to a pawn, ${saved.from}->${saved.to}`);
 
 const game = emptyGame();
 assert(legalMoves(game.board, "r").length === redMoves.length, "fresh game matches");

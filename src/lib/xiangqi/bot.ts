@@ -158,6 +158,9 @@ function placeValue(board: Board, piece: Piece, index: number, enemyKing: number
     let value = forward * 4 + center;
     if (open[file]) value += 22;
     if (enemyKing >= 0 && file === fileOf(enemyKing)) value += 14;
+    const camp = piece.side === "b" ? rank >= 7 : rank <= 2;
+    if (camp) value += 80;
+    else if (piece.side === "b" ? rank >= 5 : rank <= 4) value += 30;
     return value;
   }
   if (piece.kind === "P") {
@@ -333,7 +336,6 @@ function quiesce(
     const kingNow = move.from === king ? move.to : king;
     const legal = !fastInCheckAt(board, side, kingNow);
     if (!legal) {
-      if (move.from === 0 && move.to === 1) console.log("illegal recapture", side);
       undoMutable(board, move, captured);
       continue;
     }
@@ -432,6 +434,52 @@ function deepen(
   return { move: best, score: bestScore, depth: depthReached };
 }
 
+function seeGain(board: Board, move: Move): number {
+  const victim = board[move.to];
+  const attacker = board[move.from];
+  if (!victim || !attacker) return 0;
+  const captured = playMutable(board, move);
+  const canRecapture = legalMoves(board, opponent(attacker.side)).some((reply) => reply.to === move.to);
+  undoMutable(board, move, captured);
+  return VALUE[victim.kind] - (canRecapture ? VALUE[attacker.kind] : 0);
+}
+
+/** Biggest material the opponent wins on the next capture, after `move`. */
+function threatAfter(board: Board, move: Move, side: Side): number {
+  const captured = playMutable(board, move);
+  let best = 0;
+  for (const reply of legalMoves(board, opponent(side))) {
+    if (!board[reply.to]) continue;
+    const gain = seeGain(board, reply);
+    if (gain > best) best = gain;
+  }
+  undoMutable(board, move, captured);
+  return best;
+}
+
+/**
+ * A move that drops a cannon, horse or rook must not beat a safe move
+ * by a handful of positional points. Mates are left to the search.
+ */
+function preferSafe(board: Board, side: Side, ranked: { move: Move; score: number }[]): { move: Move; score: number } | null {
+  const best = ranked[0];
+  if (!best || best.score > MATE_BOUND || best.score < -MATE_BOUND) return best ?? null;
+  const bestThreat = threatAfter(board, best.move, side);
+  if (bestThreat < 200) return best;
+  let pick = best;
+  let pickThreat = bestThreat;
+  for (const item of ranked) {
+    if (best.score - item.score > 150) break;
+    if (item.score < -MATE_BOUND) continue;
+    const threat = threatAfter(board, item.move, side);
+    if (pickThreat - threat >= 200 && (threat < pickThreat || item.score > pick.score)) {
+      pick = item;
+      pickThreat = threat;
+    }
+  }
+  return pick;
+}
+
 function label(board: Board, side: Side, move: Move, score: number, depth: number, checking: boolean): Decision {
   const captured = board[move.to];
   const replies = Math.max(1, depth - 1);
@@ -462,7 +510,9 @@ function label(board: Board, side: Side, move: Move, score: number, depth: numbe
       to: move.to,
       kind: "capture",
       title: "Ăn quân",
-      note: `${depthNote}Ăn ${pieceName(captured.kind)}. Quân này đáng hơn phần còn lại, và không bị ăn lại lỗ.`,
+      note: seeGain(board, move) < 0
+        ? `${depthNote}Ăn ${pieceName(captured.kind)}, nhưng quân ta bị ăn lại — lỗ.`
+        : `${depthNote}Ăn ${pieceName(captured.kind)}. Không bị ăn lại lỗ.`,
     };
   }
   return {
@@ -503,6 +553,7 @@ export function decide(source: Board, side: Side): Decision {
   let best = moves[0];
   let bestScore = -Infinity;
   let finishedDepth = 1;
+  let lastRanked: { move: Move; score: number }[] = [];
   const opening = sameBoard(board, startBoard());
 
   for (let depth = 1; depth <= MAX_DEPTH; depth += 1) {
@@ -544,6 +595,7 @@ export function decide(source: Board, side: Side): Decision {
       bestScore = iterScore;
       finishedDepth = depth;
       ranked.sort((a, b) => b.score - a.score);
+      lastRanked = ranked;
       store(rootHash, depth, iterScore, EXACT, iterBest, 0);
       if (depth === MAX_DEPTH) {
         const extra = deepen(board, side, rootHash, ranked, deadline);
@@ -556,6 +608,12 @@ export function decide(source: Board, side: Side): Decision {
     } else {
       break;
     }
+  }
+
+  const safer = preferSafe(board, side, lastRanked);
+  if (safer && safer.score >= bestScore - 150) {
+    best = safer.move;
+    bestScore = safer.score;
   }
 
   return label(board, side, best, bestScore, finishedDepth, checking);
