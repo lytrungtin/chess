@@ -20,6 +20,39 @@ import {
 } from "@/lib/xiangqi/rules";
 
 const STORAGE_KEY = "xiangqi-ap-luc-v1";
+const PACE_KEY = "xiangqi-pace-v1";
+
+type Pace = "thegioi" | "morong" | "nhanh" | "chop";
+
+const PACES: Record<Pace, { label: string; hint: string; base: number; inc: number }> = {
+  thegioi: { label: "Thế giới", hint: "60 phút + 30 giây", base: 60 * 60_000, inc: 30_000 },
+  morong: { label: "Mở rộng", hint: "40 phút + 15 giây", base: 40 * 60_000, inc: 15_000 },
+  nhanh: { label: "Nhanh", hint: "10 phút + 5 giây", base: 10 * 60_000, inc: 5_000 },
+  chop: { label: "Chớp", hint: "5 phút + 3 giây", base: 5 * 60_000, inc: 3_000 },
+};
+
+function isPace(value: string | null): value is Pace {
+  return value === "thegioi" || value === "morong" || value === "nhanh" || value === "chop";
+}
+
+function freshBanks(pace: Pace): { r: number; b: number } {
+  const base = PACES[pace].base;
+  return { r: base, b: base };
+}
+
+function formatClock(ms: number): string {
+  const safe = Math.max(0, ms);
+  if (safe < 20_000) {
+    const tenths = Math.ceil(safe / 100);
+    const seconds = Math.floor(tenths / 10);
+    const tenth = tenths % 10;
+    return `0:${String(seconds).padStart(2, "0")}.${tenth}`;
+  }
+  const seconds = Math.ceil(safe / 1000);
+  const minute = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${minute}:${String(rest).padStart(2, "0")}`;
+}
 
 type RecordScore = { win: number; loss: number; draw: number };
 
@@ -93,12 +126,33 @@ export function XiangqiGame() {
   const [sound, setSound] = useState(false);
   const [record, setRecord] = useState<RecordScore>({ win: 0, loss: 0, draw: 0 });
   const [hydrated, setHydrated] = useState(false);
+  const [pace, setPace] = useState<Pace>("thegioi");
+  const [banks, setBanks] = useState(() => freshBanks("thegioi"));
+  const [flag, setFlag] = useState<Side | null>(null);
+  const [tick, setTick] = useState(() => Date.now());
   const gameRef = useRef(game);
   const audioRef = useRef<AudioContext | null>(null);
+  const banksRef = useRef(banks);
+  const paceRef = useRef(pace);
+  const flagRef = useRef<Side | null>(null);
+  const stampRef = useRef(Date.now());
+  const historyRef = useRef([freshBanks("thegioi")]);
   gameRef.current = game;
+  paceRef.current = pace;
+  banksRef.current = banks;
 
   useEffect(() => {
     setRecord(loadRecord());
+    const saved = localStorage.getItem(PACE_KEY);
+    if (isPace(saved) && saved !== "thegioi") {
+      const fresh = freshBanks(saved);
+      setPace(saved);
+      paceRef.current = saved;
+      banksRef.current = fresh;
+      historyRef.current = [fresh];
+      stampRef.current = Date.now();
+      setBanks(fresh);
+    }
     setHydrated(true);
   }, []);
 
@@ -106,6 +160,33 @@ export function XiangqiGame() {
     if (!hydrated) return;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(record));
   }, [record, hydrated]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(PACE_KEY, pace);
+  }, [pace, hydrated]);
+
+  useEffect(() => {
+    if (game.winner || game.draw || flag) return;
+    const id = window.setInterval(() => {
+      const left = banksRef.current[gameRef.current.turn] - (Date.now() - stampRef.current);
+      setTick(Date.now());
+      if (left > 0 || flagRef.current) return;
+      const loser = gameRef.current.turn;
+      flagRef.current = loser;
+      const next = { ...banksRef.current, [loser]: 0 };
+      banksRef.current = next;
+      setBanks(next);
+      setFlag(loser);
+      if (vsBot) {
+        setRecord((current) => {
+          const key = loser === human ? "loss" : "win";
+          return { ...current, [key]: current[key] + 1 };
+        });
+      }
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [game.turn, game.winner, game.draw, game.gen, flag, vsBot, human]);
 
   const targets = useMemo(() => {
     if (selected == null || game.winner || game.draw) return new Set<number>();
@@ -132,8 +213,34 @@ export function XiangqiGame() {
     });
   }
 
+  function charge(side: Side): boolean {
+    const elapsed = Date.now() - stampRef.current;
+    const left = banksRef.current[side] - elapsed;
+    if (left <= 0) {
+      flagRef.current = side;
+      const expired = { ...banksRef.current, [side]: 0 };
+      banksRef.current = expired;
+      setBanks(expired);
+      setFlag(side);
+      if (vsBot) {
+        setRecord((current) => {
+          const key = side === human ? "loss" : "win";
+          return { ...current, [key]: current[key] + 1 };
+        });
+      }
+      return false;
+    }
+    const next = { ...banksRef.current, [side]: left + PACES[paceRef.current].inc };
+    banksRef.current = next;
+    historyRef.current.push(next);
+    stampRef.current = Date.now();
+    setBanks(next);
+    return true;
+  }
+
   function publish(prev: Snapshot, next: Snapshot) {
-    if (next === prev) return;
+    if (next === prev || flagRef.current) return;
+    if (!charge(prev.turn)) return;
     if (!prev.winner && !prev.draw) scoreFor(prev, next, 1);
     playSound(next);
     setSelected(null);
@@ -141,10 +248,11 @@ export function XiangqiGame() {
   }
 
   useEffect(() => {
-    if (!vsBot || game.winner || game.draw || game.turn === human) return;
+    if (!vsBot || game.winner || game.draw || flag || game.turn === human) return;
     const gen = game.gen;
     const turn = game.turn;
     const timer = window.setTimeout(() => {
+      if (flagRef.current) return;
       const prev = gameRef.current;
       if (prev.gen !== gen || prev.turn !== turn || prev.winner || prev.draw) return;
       const choice = decide(prev.board, turn);
@@ -153,11 +261,11 @@ export function XiangqiGame() {
       publish(prev, applyMove(prev, choice.from, choice.to));
     }, 280);
     return () => window.clearTimeout(timer);
-  }, [vsBot, human, sound, game.gen, game.turn, game.winner, game.draw, game.moves.length]);
+  }, [vsBot, human, sound, game.gen, game.turn, game.winner, game.draw, game.moves.length, flag]);
 
   function onPoint(index: number) {
     const prev = gameRef.current;
-    if (prev.winner || prev.draw) return;
+    if (prev.winner || prev.draw || flagRef.current) return;
     if (vsBot && prev.turn !== human) return;
     const piece = prev.board[index];
     if (selected != null && targets.has(index)) {
@@ -168,11 +276,19 @@ export function XiangqiGame() {
     else setSelected(null);
   }
 
-  function restart(nextHuman = human, nextVsBot = vsBot) {
+  function restart(nextHuman = human, nextVsBot = vsBot, nextPace = paceRef.current) {
+    const fresh = freshBanks(nextPace);
     setHuman(nextHuman);
     setVsBot(nextVsBot);
+    setPace(nextPace);
     setDecision(null);
     setSelected(null);
+    flagRef.current = null;
+    setFlag(null);
+    banksRef.current = fresh;
+    historyRef.current = [fresh];
+    stampRef.current = Date.now();
+    setBanks(fresh);
     setGame((prev) => ({ ...emptyGame(), gen: prev.gen + 1 }));
   }
 
@@ -189,9 +305,24 @@ export function XiangqiGame() {
     ) {
       next = undoLast(next);
     }
-    if (finished) scoreFor(prev, prev, -1);
+    if (flagRef.current) {
+      if (vsBot) {
+        const loser = flagRef.current;
+        setRecord((current) => {
+          const key = loser === human ? "loss" : "win";
+          return { ...current, [key]: Math.max(0, current[key] - 1) };
+        });
+      }
+      flagRef.current = null;
+      setFlag(null);
+    } else if (finished) scoreFor(prev, prev, -1);
     setDecision(null);
     setSelected(null);
+    const mark = historyRef.current[next.moves.length] ?? freshBanks(paceRef.current);
+    historyRef.current = historyRef.current.slice(0, next.moves.length + 1);
+    banksRef.current = mark;
+    stampRef.current = Date.now();
+    setBanks(mark);
     setGame(next);
   }
 
@@ -202,12 +333,18 @@ export function XiangqiGame() {
     setSound((on) => !on);
   }
 
-  const thinking = vsBot && !game.winner && !game.draw && game.turn !== human;
+  const thinking = vsBot && !game.winner && !game.draw && !flag && game.turn !== human;
   const last = game.moves[game.moves.length - 1];
-  const checked = !game.winner && !game.draw && inCheck(game.board, game.turn);
+  const checked = !game.winner && !game.draw && !flag && inCheck(game.board, game.turn);
   const king = findKing(game.board, game.turn);
   const yourTurn = !vsBot || game.turn === human;
   const activeKind = decision?.kind;
+  const over = Boolean(game.winner) || game.draw || Boolean(flag);
+  const spent = Math.max(0, tick - stampRef.current);
+  const shown = {
+    r: !over && game.turn === "r" ? Math.max(0, banks.r - spent) : banks.r,
+    b: !over && game.turn === "b" ? Math.max(0, banks.b - spent) : banks.b,
+  };
 
   let status = yourTurn ? "Tới lượt bạn" : "Tới lượt đối thủ.";
   if (!vsBot) status = `Tới lượt ${sideLabel(game.turn).toLowerCase()}.`;
@@ -216,6 +353,8 @@ export function XiangqiGame() {
   if (game.draw) status = "Hòa — thế cờ lặp lại.";
   if (game.winner === "r") status = "Đỏ thắng — chiếu hết.";
   if (game.winner === "b") status = "Đen thắng — chiếu hết.";
+  if (flag === "r") status = "Đỏ hết giờ — đen thắng.";
+  if (flag === "b") status = "Đen hết giờ — đỏ thắng.";
 
   return (
     <main className="mx-auto grid w-full max-w-6xl gap-5 px-3 py-4 sm:px-6 sm:py-6 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:gap-8">
@@ -232,7 +371,9 @@ export function XiangqiGame() {
         </p>
         {thinking ? <div className="think-bar mb-3" /> : <div className="mb-3 h-0.5" />}
 
-        <div className="xq-frame mx-auto max-w-[40rem]">
+        <div className="mx-auto flex max-w-[40rem] flex-col gap-2">
+          <ClockFace label="Đen" ms={shown.b} active={!over && game.turn === "b"} inc={PACES[pace].inc} />
+          <div className="xq-frame">
         <div className="xq-board" role="group" aria-label="Bàn cờ tướng">
           <svg viewBox="0 0 8 9" className="absolute inset-0 h-full w-full" aria-hidden="true">
             <rect width="8" height="9" rx="0.08" fill="var(--color-paper)" />
@@ -280,7 +421,7 @@ export function XiangqiGame() {
             const piece = game.board[index];
             const file = fileOf(index);
             const rank = rankOf(index);
-            const locked = Boolean(game.winner) || game.draw || thinking;
+            const locked = Boolean(game.winner) || game.draw || thinking || Boolean(flag);
             return (
               <button
                 key={index}
@@ -312,6 +453,8 @@ export function XiangqiGame() {
             );
           })}
         </div>
+          </div>
+          <ClockFace label="Đỏ" ms={shown.r} active={!over && game.turn === "r"} inc={PACES[pace].inc} />
         </div>
       </section>
 
@@ -355,6 +498,19 @@ export function XiangqiGame() {
               label="Bạn cầm đen"
             />
           </div>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            {(Object.keys(PACES) as Pace[]).map((key) => (
+              <Choice
+                key={key}
+                pressed={pace === key}
+                onClick={() => pace !== key && restart(human, vsBot, key)}
+                label={PACES[key].label}
+              />
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-ink/70">
+            {PACES[pace].hint}. Hết giờ là thua. Mỗi nước đi xong được cộng thêm giây, như thể lệ giải thế giới.
+          </p>
           <div className="mt-3 grid grid-cols-3 gap-2">
             <button
               type="button"
@@ -415,6 +571,26 @@ export function XiangqiGame() {
         </ol>
       </aside>
     </main>
+  );
+}
+
+function ClockFace({ label, ms, active, inc }: { label: string; ms: number; active: boolean; inc: number }) {
+  const hot = ms < 30_000;
+  return (
+    <div
+      className={clsx(
+        "flex items-center justify-between rounded-2xl bg-paper px-4 py-2 text-ink",
+        active && "ring-2 ring-mark-x",
+      )}
+    >
+      <div>
+        <p className="text-xs font-medium tracking-[0.14em] text-ink/60 uppercase">{label}</p>
+        <p className="text-xs text-ink/50">+{inc / 1000} giây mỗi nước</p>
+      </div>
+      <p className={clsx("font-display text-3xl leading-none tabular-nums", hot && "text-mark-x")} aria-live="off">
+        {formatClock(ms)}
+      </p>
+    </div>
   );
 }
 
