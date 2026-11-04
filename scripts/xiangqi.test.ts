@@ -133,6 +133,14 @@ const pawnTakesCannon = legalMoves(afterSave, "b").some(
 );
 assert(!pawnTakesCannon, `left the cannon to a pawn, ${saved.from}->${saved.to}`);
 
+const intoHorse = startBoard();
+const prelude = "B8 E8 H1 G3 E8 G8 G4 G5 G8 G5 G3 F5 H8 E8 G1 E3 G5 G4 I1 G1 E8 E4 F1 E2 G4 G6 B1 C3 E4 E5 F5 G7 G6 A6 A1 B1 H10 G8 G1 G5".split(" ");
+for (let i = 0; i < prelude.length; i += 2) {
+  playMutable(intoHorse, { from: at(prelude[i].charCodeAt(0) - 65, Number(prelude[i].slice(1)) - 1), to: at(prelude[i + 1].charCodeAt(0) - 65, Number(prelude[i + 1].slice(1)) - 1) });
+}
+const pushed = decide(intoHorse, "r");
+assert(!(pushed.from === at(4, 6) && pushed.to === at(4, 5)), "pawn walked into the horse");
+
 const game = emptyGame();
 assert(legalMoves(game.board, "r").length === redMoves.length, "fresh game matches");
 console.log("xiangqi ok");

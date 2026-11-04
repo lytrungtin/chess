@@ -152,8 +152,18 @@ function placeValue(board: Board, piece: Piece, index: number, enemyKing: number
   const rank = rankOf(index);
   const forward = piece.side === "r" ? 9 - rank : rank;
   const center = 4 - Math.abs(file - 4);
-  if (piece.kind === "H") return forward * 7 + center * 5;
-  if (piece.kind === "C") return (file === 4 ? 32 : center * 3) + (forward >= 3 ? 10 : 0);
+  if (piece.kind === "H") {
+    let value = forward * 7 + center * 5;
+    const invaded = piece.side === "b" ? rank >= 5 : rank <= 4;
+    if (invaded) value += 130;
+    if (piece.side === "b" ? rank >= 7 : rank <= 2) value += 90;
+    return value;
+  }
+  if (piece.kind === "C") {
+    let value = (file === 4 ? 28 : center * 3) + (forward >= 3 ? 8 : 0);
+    if (piece.side === "b" ? rank >= 7 : rank <= 2) value += 36;
+    return value;
+  }
   if (piece.kind === "R") {
     let value = forward * 4 + center;
     if (open[file]) value += 22;
@@ -464,20 +474,17 @@ function threatAfter(board: Board, move: Move, side: Side): number {
 function preferSafe(board: Board, side: Side, ranked: { move: Move; score: number }[]): { move: Move; score: number } | null {
   const best = ranked[0];
   if (!best || best.score > MATE_BOUND || best.score < -MATE_BOUND) return best ?? null;
-  const bestThreat = threatAfter(board, best.move, side);
-  if (bestThreat < 200) return best;
-  let pick = best;
-  let pickThreat = bestThreat;
-  for (const item of ranked) {
-    if (best.score - item.score > 150) break;
-    if (item.score < -MATE_BOUND) continue;
-    const threat = threatAfter(board, item.move, side);
-    if (pickThreat - threat >= 200 && (threat < pickThreat || item.score > pick.score)) {
-      pick = item;
-      pickThreat = threat;
-    }
+  const threats = ranked.map((item) => (item.score < -MATE_BOUND ? 0 : threatAfter(board, item.move, side)));
+  let pick = 0;
+  for (let i = 1; i < ranked.length; i += 1) {
+    if (ranked[i].score < -MATE_BOUND) continue;
+    const saferBy = threats[pick] - threats[i];
+    if (saferBy < 200) continue;
+    const allow = Math.min(700, saferBy);
+    if (ranked[pick].score - ranked[i].score > allow) continue;
+    pick = i;
   }
-  return pick;
+  return ranked[pick];
 }
 
 function label(board: Board, side: Side, move: Move, score: number, depth: number, checking: boolean): Decision {
@@ -611,7 +618,7 @@ export function decide(source: Board, side: Side): Decision {
   }
 
   const safer = preferSafe(board, side, lastRanked);
-  if (safer && safer.score >= bestScore - 150) {
+  if (safer && (safer.score >= bestScore - 700 || safer.score > MATE_BOUND)) {
     best = safer.move;
     bestScore = safer.score;
   }
