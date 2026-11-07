@@ -454,13 +454,61 @@ function seeGain(board: Board, move: Move): number {
   return VALUE[victim.kind] - (canRecapture ? VALUE[attacker.kind] : 0);
 }
 
+function rayGain(board: Board, from: number): number {
+  const piece = board[from];
+  if (!piece || (piece.kind !== "R" && piece.kind !== "C")) return 0;
+  const file = fileOf(from);
+  const rank = rankOf(from);
+  let best = 0;
+  for (const [df, dr] of [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ] as const) {
+    let f = file + df;
+    let r = rank + dr;
+    while (f >= 0 && f < 9 && r >= 0 && r < 10 && !board[at(f, r)]) {
+      f += df;
+      r += dr;
+    }
+    if (f < 0 || f > 8 || r < 0 || r > 9) continue;
+    if (piece.kind === "C") {
+      f += df;
+      r += dr;
+      while (f >= 0 && f < 9 && r >= 0 && r < 10 && !board[at(f, r)]) {
+        f += df;
+        r += dr;
+      }
+      if (f < 0 || f > 8 || r < 0 || r > 9) continue;
+    }
+    const target = board[at(f, r)];
+    if (!target || target.side === piece.side) continue;
+    const gain = seeGain(board, { from, to: at(f, r) });
+    if (gain > best) best = gain;
+  }
+  return best;
+}
+
 /** Biggest material the opponent wins on the next capture, after `move`. */
 function threatAfter(board: Board, move: Move, side: Side): number {
   const captured = playMutable(board, move);
   let best = 0;
-  for (const reply of legalMoves(board, opponent(side))) {
-    if (!board[reply.to]) continue;
-    const gain = seeGain(board, reply);
+  const opp = opponent(side);
+  for (const reply of legalMoves(board, opp)) {
+    if (board[reply.to]) {
+      const gain = seeGain(board, reply);
+      if (gain > best) best = gain;
+      continue;
+    }
+    const piece = board[reply.from];
+    if (!piece || (piece.kind !== "R" && piece.kind !== "C")) continue;
+    const rank = rankOf(reply.to);
+    const inCamp = opp === "b" ? rank >= 7 : rank <= 2;
+    if (!inCamp) continue;
+    const entered = playMutable(board, reply);
+    const gain = rayGain(board, reply.to);
+    undoMutable(board, reply, entered);
     if (gain > best) best = gain;
   }
   undoMutable(board, move, captured);
@@ -473,16 +521,17 @@ function threatAfter(board: Board, move: Move, side: Side): number {
  */
 function preferSafe(board: Board, side: Side, ranked: { move: Move; score: number }[]): { move: Move; score: number } | null {
   const best = ranked[0];
-  if (!best || best.score > MATE_BOUND || best.score < -MATE_BOUND) return best ?? null;
-  const threats = ranked.map((item) => (item.score < -MATE_BOUND ? 0 : threatAfter(board, item.move, side)));
+  if (!best || best.score > MATE_BOUND) return best ?? null;
+  const threats = ranked.map((item) => (item.score < -MATE_BOUND ? 1_000_000 : threatAfter(board, item.move, side)));
   let pick = 0;
   for (let i = 1; i < ranked.length; i += 1) {
     if (ranked[i].score < -MATE_BOUND) continue;
     const saferBy = threats[pick] - threats[i];
-    if (saferBy < 200) continue;
-    const allow = Math.min(700, saferBy);
-    if (ranked[pick].score - ranked[i].score > allow) continue;
-    pick = i;
+    if (saferBy >= 150) {
+      pick = i;
+      continue;
+    }
+    if (saferBy > -150 && ranked[i].score > ranked[pick].score) pick = i;
   }
   return ranked[pick];
 }
@@ -618,7 +667,7 @@ export function decide(source: Board, side: Side): Decision {
   }
 
   const safer = preferSafe(board, side, lastRanked);
-  if (safer && (safer.score >= bestScore - 700 || safer.score > MATE_BOUND)) {
+  if (safer) {
     best = safer.move;
     bestScore = safer.score;
   }

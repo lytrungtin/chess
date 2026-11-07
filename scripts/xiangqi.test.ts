@@ -2,9 +2,11 @@ import { decide } from "../src/lib/xiangqi/bot";
 import {
   at,
   emptyGame,
+  fileOf,
   kingsFace,
   legalMoves,
   playMutable,
+  rankOf,
   startBoard,
   type Board,
   type Piece,
@@ -140,6 +142,25 @@ for (let i = 0; i < prelude.length; i += 2) {
 }
 const pushed = decide(intoHorse, "r");
 assert(!(pushed.from === at(4, 6) && pushed.to === at(4, 5)), "pawn walked into the horse");
+
+const openFile = startBoard();
+const half = "B8 E8 B1 C3 E8 C8 G4 G5 C8 C4 A1 B1 H8 G8 H1 G3 G8 C8 G3 F5 G7 G6 G5 G6 C10 E8 H3 E3 B10 D9 I1 I2 C4 B4 B3 A3".split(" ");
+for (let i = 0; i < half.length; i += 2) {
+  playMutable(openFile, {
+    from: at(half[i].charCodeAt(0) - 65, Number(half[i].slice(1)) - 1),
+    to: at(half[i + 1].charCodeAt(0) - 65, Number(half[i + 1].slice(1)) - 1),
+  });
+}
+const kept = decide(openFile, "r");
+playMutable(openFile, kept);
+const rookBreaks = legalMoves(openFile, "b").some(
+  (move) =>
+    openFile[move.from]?.kind === "R" &&
+    fileOf(move.from) === 1 &&
+    !openFile[move.to] &&
+    rankOf(move.to) >= 7,
+);
+assert(!rookBreaks, `opened the file for the rook, ${kept.from}->${kept.to}`);
 
 const game = emptyGame();
 assert(legalMoves(game.board, "r").length === redMoves.length, "fresh game matches");
